@@ -154,6 +154,60 @@
             margin-bottom: 2rem;
         }
 
+        h4.mb-3 {
+            color: #00d4ff !important;
+            font-size: 1.5rem;
+            font-weight: bold;
+            text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+            border-bottom: 2px solid #00d4ff;
+            padding-bottom: 8px;
+            margin-bottom: 1rem !important;
+            background: linear-gradient(45deg, rgba(0, 212, 255, 0.1), rgba(0, 168, 204, 0.1));
+            padding: 12px 20px;
+            border-radius: 10px;
+            border-left: 4px solid #00d4ff;
+            box-shadow: 0 4px 15px rgba(0, 212, 255, 0.2);
+            display: inline-block;
+            position: relative;
+        }
+        
+        h4.mb-3::before {
+            content: '📋';
+            position: absolute;
+            left: -10px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1.2rem;
+            margin-right: 8px;
+        }
+        
+        h3.mb-4 {
+            color: #00d4ff !important;
+            font-size: 1.5rem;
+            font-weight: bold;
+            text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+            border-bottom: 2px solid #00d4ff;
+            padding-bottom: 8px;
+            margin-bottom: 1rem !important;
+            background: linear-gradient(45deg, rgba(0, 212, 255, 0.1), rgba(0, 168, 204, 0.1));
+            padding: 12px 20px;
+            border-radius: 10px;
+            border-left: 4px solid #00d4ff;
+            box-shadow: 0 4px 15px rgba(0, 212, 255, 0.2);
+            display: inline-block;
+            position: relative;
+        }
+        
+        h3.mb-4::before {
+            content: '📝';
+            position: absolute;
+            left: -10px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1.2rem;
+            margin-right: 8px;
+        }
+
         .btn-action {
             font-size: 1.2rem;
             padding: 1rem 2rem;
@@ -569,11 +623,6 @@
                     <i class="fas fa-sign-in-alt me-2"></i>Iniciar Sesión
                 </button>
             </form>
-            <div class="mt-3 text-center">
-                <small class="text-muted">
-                    Admin: admin@progress.com | Password: admin123
-                </small>
-            </div>
         </div>
     </div>
 
@@ -700,11 +749,12 @@
                                     <th>Puesto</th>
                                     <th>Rol</th>
                                     <th>Fecha de Creación</th>
+                                    <th>Acciones</th>
                                 </tr>
                             </thead>
                             <tbody id="employeesTableBody">
                                 <tr>
-                                    <td colspan="6" class="text-center">Cargando empleados...</td>
+                                    <td colspan="7" class="text-center">Cargando empleados...</td>
                                 </tr>
                             </tbody>
                         </table>

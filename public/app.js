@@ -43,6 +43,116 @@ function formatTimeColombia(date) {
 
 const API_BASE = window.location.origin + '/api';
 
+// Función para mostrar alertas personalizadas con estilo
+function showCustomAlert(title, message, type = 'info') {
+    // Crear modal personalizado
+    const modalHtml = `
+        <div id="customAlertModal" style="
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(5px);
+        ">
+            <div style="
+                background: linear-gradient(135deg, rgba(0, 212, 255, 0.95), rgba(0, 168, 204, 0.95));
+                border: 2px solid rgba(0, 212, 255, 0.3);
+                border-radius: 15px;
+                padding: 2rem;
+                max-width: 400px;
+                width: 90%;
+                box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+                backdrop-filter: blur(10px);
+                position: relative;
+                overflow: hidden;
+            ">
+                <div style="
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 4px;
+                    background: linear-gradient(90deg, #00d4ff, #00a8cc);
+                    animation: shimmer 2s ease-in-out infinite;
+                "></div>
+                
+                <div style="
+                    text-align: center;
+                    margin-bottom: 1.5rem;
+                ">
+                    <div style="
+                        font-size: 2rem;
+                        margin-bottom: 0.5rem;
+                        color: #00d4ff;
+                        text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+                    ">${title}</div>
+                    
+                    <div style="
+                        color: #ffffff;
+                        font-size: 1rem;
+                        line-height: 1.5;
+                        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+                    ">${message}</div>
+                </div>
+                
+                <div style="
+                    text-align: center;
+                    margin-top: 1.5rem;
+                ">
+                    <button onclick="closeCustomAlert()" style="
+                        background: linear-gradient(45deg, #00d4ff, #00a8cc);
+                        border: none;
+                        color: white;
+                        padding: 0.75rem 2rem;
+                        border-radius: 8px;
+                        font-weight: 600;
+                        cursor: pointer;
+                        transition: all 0.3s ease;
+                        box-shadow: 0 4px 15px rgba(0, 212, 255, 0.3);
+                    ">
+                        <i class="fas fa-check me-2"></i>Entendido
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Agregar al DOM
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    // Agregar estilos CSS para animación
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+        
+        #customAlertModal button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 212, 255, 0.4);
+        }
+    `;
+    document.head.appendChild(style);
+}
+
+// Función para cerrar alerta personalizada
+function closeCustomAlert() {
+    const modal = document.getElementById('customAlertModal');
+    if (modal) {
+        modal.style.opacity = '0';
+        setTimeout(() => {
+            modal.remove();
+        }, 300);
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     const token = localStorage.getItem('progressToken');
     if (token) {
@@ -387,6 +497,14 @@ async function recordAttendance(type) {
             } else {
                 const action = type === 'entry' ? 'entrada' : 'salida';
                 alert(`${action.charAt(0).toUpperCase() + action.slice(1)} registrada correctamente`);
+                
+                // Mostrar alerta específico para entradas
+                if (type === 'entry') {
+                    setTimeout(() => {
+                        showCustomAlert('⏰ RECORDATORIO', 'No olvides registrar tu salida al finalizar tu jornada.<br><br>Esto evitará errores en el cálculo de horas extras y mantendrá tus registros correctos.', 'info');
+                    }, 1000); // Esperar 1 segundo para mostrar el recordatorio
+                }
+                
                 loadMyAttendance();
             }
         })
@@ -647,6 +765,13 @@ function displayEmployees(employees) {
                 </span>
             </td>
             <td><span class="text-black bg-white px-2 py-1 rounded">${formatDateColombia(new Date(emp.created_at))}</span></td>
+            <td>
+                <button onclick="deleteEmployee(${emp.id}, '${emp.name}')" 
+                        class="btn btn-sm btn-outline-danger" 
+                        title="Eliminar Empleado">
+                    <i class="fas fa-trash me-1"></i>Eliminar
+                </button>
+            </td>
         </tr>
     `).join('');
 }
@@ -1223,5 +1348,65 @@ async function deleteEmployee(employeeId) {
     } catch (error) {
         console.error('Error:', error);
         alert('Error al eliminar el empleado');
+    }
+}
+
+// Función para eliminar un empleado
+async function deleteEmployee(employeeId, employeeName) {
+    // Obtener el usuario actual para verificar si es admin
+    const currentUser = JSON.parse(localStorage.getItem('progressUser'));
+    
+    if (currentUser.role !== 'admin') {
+        alert('Solo los administradores pueden eliminar empleados');
+        return;
+    }
+    
+    // No permitir eliminar al propio admin
+    if (currentUser.id === employeeId) {
+        alert('No puedes eliminar tu propio usuario');
+        return;
+    }
+    
+    // Confirmar eliminación con mensaje personalizado
+    if (!confirm(`⚠️ ¿Estás seguro de que quieres eliminar al empleado "${employeeName}"?\n\nEsta acción eliminará:\n• Todos sus registros de asistencia\n• Su información personal\n• No se puede deshacer`)) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${API_BASE}/admin/employees/${employeeId}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('progressToken')}`
+            }
+        });
+        
+        if (response.ok) {
+            showCustomAlert('✅ Empleado Eliminado', `El empleado "${employeeName}" ha sido eliminado exitosamente.\n\nTodos sus registros de asistencia también han sido eliminados.`, 'success');
+            loadEmployees(); // Recargar lista de empleados
+        } else {
+            const data = await response.json();
+            showCustomAlert('❌ Error', data.error || 'Error al eliminar el empleado', 'danger');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showCustomAlert('❌ Error de Conexión', 'No se pudo eliminar el empleado. Verifica tu conexión a internet.', 'danger');
+    }
+}
+
+// Función para cargar los registros de asistencia del empleado actual
+async function loadMyAttendance() {
+    try {
+        const response = await fetch(`${API_BASE}/attendance`, {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('progressToken')}`
+            }
+        });
+        
+        const records = await response.json();
+        displayAttendanceRecords(records);
+    } catch (error) {
+        console.error('Error cargando asistencia:', error);
+        document.getElementById('attendanceRecords').innerHTML = 
+            '<p class="text-danger">Error al cargar registros</p>';
     }
 }
