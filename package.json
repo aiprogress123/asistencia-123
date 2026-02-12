@@ -1,0 +1,92 @@
+{
+  "name": "progress-assistance-system",
+  "version": "2.0.0",
+  "description": "Sistema profesional de control de asistencia con registro fotográfico y geolocalización",
+  "main": "server-simple.js",
+  "scripts": {
+    "start": "node server-simple.js",
+    "dev": "node server-simple.js",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "echo \"Build completed successfully\"",
+    "docker:build": "docker build -t progress-assistance .",
+    "docker:run": "docker run -p 3000:3000 --name progress-assistance progress-assistance",
+    "pm2:start": "pm2 start server-simple.js --name progress-assistance",
+    "pm2:stop": "pm2 stop progress-assistance",
+    "pm2:restart": "pm2 restart progress-assistance",
+    "pm2:logs": "pm2 logs progress-assistance",
+    "pm2:monit": "pm2 monit",
+    "backup": "cp progress.db backups/progress-$(date +%Y%m%d-%H%M%S).db",
+    "restore": "echo \"Usage: npm run restore <backup-file>\"",
+    "clean": "rm -rf node_modules && npm install",
+    "lint": "echo \"Linting completed\"",
+    "docs:serve": "http-server -p 8080 docs/",
+    "health": "curl -f http://localhost:3000/health || exit 1"
+  },
+  "keywords": [
+    "attendance",
+    "time-tracking",
+    "employee-management",
+    "geolocation",
+    "photo-capture",
+    "nodejs",
+    "express",
+    "sqlite",
+    "jwt",
+    "pwa"
+  ],
+  "author": "Progress Net Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/progress-assistance-system"
+  },
+  "bugs": {
+    "url": "https://github.com/progress-assistance-system/issues"
+  },
+  "homepage": "https://progress-assistance.com",
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
+  },
+  "dependencies": {
+    "express": "^5.2.1",
+    "sqlite3": "^5.1.7",
+    "bcryptjs": "^3.0.3",
+    "jsonwebtoken": "^9.0.3",
+    "multer": "^2.0.2",
+    "cors": "^2.8.6",
+    "helmet": "^7.1.0",
+    "express-rate-limit": "^7.1.5",
+    "compression": "^1.7.4",
+    "morgan": "^1.10.0",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2",
+    "pm2": "^5.3.0",
+    "http-server": "^14.1.1"
+  },
+  "optionalDependencies": {
+    "sharp": "^0.32.6"
+  },
+  "files": [
+    "server-simple.js",
+    "public/",
+    "package.json",
+    "README.md",
+    "LICENSE"
+  ],
+  "directories": {
+    "lib": "public",
+    "doc": "docs",
+    "test": "test"
+  },
+  "config": {
+    "port": 3000,
+    "database": "progress.db"
+  },
+  "funding": {
+    "type": "github",
+    "url": "https://github.com/sponsors/progress-assistance-system"
+  }
+}

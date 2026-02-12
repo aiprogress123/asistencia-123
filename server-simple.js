@@ -8,7 +8,7 @@ const fs = require('fs');
 const path = require('path');
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 const JWT_SECRET = 'progress_net_secret_key_2024';
 const TIMEZONE = 'America/Bogota';
 
@@ -57,11 +57,18 @@ db.serialize(() => {
     db.run(`CREATE TABLE IF NOT EXISTS attendance (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         employee_id INTEGER,
+        employee_name TEXT NOT NULL,
         type TEXT NOT NULL,
         photo_path TEXT,
         latitude REAL,
         longitude REAL,
         timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+        admin_registered BOOLEAN DEFAULT 0,
+        admin_id INTEGER,
+        admin_name TEXT,
+        exit_reason TEXT,
+        other_reason TEXT,
+        admin_notes TEXT,
         FOREIGN KEY (employee_id) REFERENCES employees (id)
     )`, (err) => {
         if (err) console.error('Error creando tabla attendance:', err);
@@ -119,6 +126,36 @@ db.serialize(() => {
             });
         } else {
             console.log('Usuario coordinador ya existe');
+        }
+    });
+
+    // Verificar si existe usuario ban
+    db.get("SELECT COUNT(*) as count FROM employees WHERE role = 'ban'", (err, row) => {
+        if (err) {
+            console.error('Error verificando usuario ban:', err);
+            return;
+        }
+        
+        console.log('Ban count:', row.count);
+        
+        if (row.count === 0) {
+            console.log('Creando usuario ban...');
+            const hashedPassword = bcrypt.hashSync('ban123', 10);
+            db.run(`
+                INSERT INTO employees (name, email, password, position, role) 
+                VALUES ('Usuario Ban', 'ban@progress.com', ?, 'Sin Turno Fijo', 'ban')
+            `, [hashedPassword], function(err) {
+                if (err) {
+                    console.error('Error creando usuario ban:', err);
+                    if (err.code === 'SQLITE_CONSTRAINT') {
+                        console.log('El usuario ban ya existe en la base de datos');
+                    }
+                } else {
+                    console.log('Usuario ban creado con ID:', this.lastID);
+                }
+            });
+        } else {
+            console.log('Usuario ban ya existe');
         }
     });
 });
@@ -249,6 +286,94 @@ app.delete('/api/admin/employees/:id', authenticateToken, (req, res) => {
     });
 });
 
+// Endpoint para que el administrador registre asistencia
+app.post('/api/admin/attendance', authenticateToken, (req, res) => {
+    if (req.user.role !== 'admin') {
+        return res.status(403).json({ error: 'No autorizado - Solo administradores pueden registrar asistencia administrativamente' });
+    }
+
+    const { 
+        employee_name, 
+        type, 
+        timestamp, 
+        admin_registered,
+        admin_id,
+        admin_name,
+        exit_reason,
+        other_reason,
+        admin_notes,
+        latitude,
+        longitude,
+        photo_path
+    } = req.body;
+    
+    if (!employee_name || !type || !timestamp) {
+        return res.status(400).json({ error: 'Empleado, tipo y timestamp son requeridos' });
+    }
+
+    if (type !== 'exit') {
+        return res.status(400).json({ error: 'Solo se pueden registrar salidas administrativamente' });
+    }
+
+    // Verificar que el empleado exista
+    db.get("SELECT id FROM employees WHERE name = ?", [employee_name], (err, employee) => {
+        if (err) {
+            console.error('Error buscando empleado:', err);
+            return res.status(500).json({ error: 'Error al buscar empleado' });
+        }
+        
+        if (!employee) {
+            return res.status(404).json({ error: 'Empleado no encontrado' });
+        }
+
+        // Insertar registro de asistencia administrativo
+        db.run(`
+            INSERT INTO attendance (
+                employee_id, 
+                employee_name, 
+                type, 
+                timestamp, 
+                latitude, 
+                longitude, 
+                photo_path,
+                admin_registered,
+                admin_id,
+                admin_name,
+                exit_reason,
+                other_reason,
+                admin_notes
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `, [
+            employee.id,
+            employee_name,
+            type,
+            timestamp,
+            latitude,
+            longitude,
+            photo_path,
+            admin_registered,
+            admin_id,
+            admin_name,
+            exit_reason,
+            other_reason,
+            admin_notes
+        ], function(err) {
+            if (err) {
+                console.error('Error registrando asistencia administrativa:', err);
+                return res.status(500).json({ error: 'Error al registrar asistencia administrativa' });
+            }
+            
+            res.json({ 
+                message: 'Asistencia registrada administrativamente correctamente',
+                id: this.lastID,
+                timestamp: timestamp,
+                employee: employee_name,
+                registered_by: admin_name
+            });
+        });
+    });
+});
+
 // Ruta para actualizar nombre de empleado
 app.put('/api/admin/employees/:id/name', authenticateToken, (req, res) => {
     if (req.user.role !== 'admin') {
@@ -292,33 +417,58 @@ app.put('/api/admin/employees/:id/role', authenticateToken, (req, res) => {
     }
 
     const employeeId = req.params.id;
-    const { role } = req.body;
+    const { role, reason } = req.body;
     
     // Validar que el rol sea válido
-    const validRoles = ['employee', 'coordinator', 'admin'];
+    const validRoles = ['employee', 'coordinator', 'admin', 'ban'];
     if (!validRoles.includes(role)) {
-        return res.status(400).json({ error: 'Rol inválido. Roles válidos: employee, coordinator, admin' });
+        return res.status(400).json({ error: 'Rol inválido. Roles válidos: employee, coordinator, admin, ban' });
+    }
+    
+    // Validar que se proporcionó un motivo
+    if (!reason || reason.trim() === '') {
+        return res.status(400).json({ error: 'El motivo del cambio es requerido' });
     }
     
     // No permitir que el admin cambie su propio rol
-    if (req.user.userId == employeeId) {
-        return res.status(400).json({ error: 'No puedes cambiar tu propio rol' });
+    if (req.user.id == employeeId) {
+        return res.status(403).json({ error: 'No puedes cambiar tu propio rol' });
     }
-
-    db.run("UPDATE employees SET role = ? WHERE id = ?", [role, employeeId], function(err) {
+    
+    // Obtener información del empleado antes del cambio
+    db.get("SELECT name, role FROM employees WHERE id = ?", [employeeId], (err, employee) => {
         if (err) {
-            console.error('Error actualizando rol:', err);
-            return res.status(500).json({ error: 'Error al actualizar rol' });
+            console.error('Error obteniendo empleado:', err);
+            return res.status(500).json({ error: 'Error al obtener información del empleado' });
         }
         
-        if (this.changes === 0) {
+        if (!employee) {
             return res.status(404).json({ error: 'Empleado no encontrado' });
         }
         
-        res.json({ 
-            message: 'Rol actualizado correctamente',
-            employeeId: employeeId,
-            newRole: role
+        // Actualizar rol del empleado
+        db.run("UPDATE employees SET role = ? WHERE id = ?", [role, employeeId], function(err) {
+            if (err) {
+                console.error('Error actualizando rol:', err);
+                return res.status(500).json({ error: 'Error al actualizar el rol del empleado' });
+            }
+            
+            if (this.changes === 0) {
+                return res.status(404).json({ error: 'Empleado no encontrado' });
+            }
+            
+            // Registrar el cambio de rol en un log (opcional)
+            console.log(`Cambio de rol: ${employee.name} (${employee.role}) -> ${role} por ${req.user.email}. Motivo: ${reason}`);
+            
+            res.json({ 
+                message: 'Rol actualizado correctamente',
+                employeeId: employeeId,
+                employeeName: employee.name,
+                oldRole: employee.role,
+                newRole: role,
+                reason: reason,
+                changedBy: req.user.email
+            });
         });
     });
 });
@@ -433,8 +583,11 @@ app.delete('/api/attendance/all', authenticateToken, (req, res) => {
 app.use('/uploads', express.static('uploads'));
 
 // Iniciar servidor
-app.listen(PORT, () => {
-    console.log('Servidor corriendo en http://localhost:3000');
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Servidor corriendo en http://0.0.0.0:${PORT}`);
+    console.log(`Acceso local: http://localhost:${PORT}`);
+    console.log(`Acceso red: http://[TU-IP-LOCAL]:${PORT}`);
     console.log('Usuario admin: admin@progress.com / admin123');
     console.log('Usuario coordinador: coordinador@progress.com / coord123');
+    console.log('Usuario ban: ban@progress.com / ban123');
 });

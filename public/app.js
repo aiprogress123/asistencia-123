@@ -267,24 +267,92 @@ function loginSuccess(user, token) {
     document.getElementById('loginScreen').classList.add('hidden');
     document.getElementById('mainApp').classList.remove('hidden');
     
+    // Determinar el rol y texto a mostrar
+    let roleText = 'Empleado';
+    if (user.role === 'admin') {
+        roleText = 'Administrador';
+    } else if (user.role === 'coordinator') {
+        roleText = 'Coordinador';
+    } else if (user.role === 'ban') {
+        roleText = 'Ban';
+    }
+    
     document.getElementById('userInfo').innerHTML = `
         <div class="d-inline-block">
             <span class="text-white fw-bold me-2">PROGRESS NET</span>
             <span class="text-muted">|</span>
             <span class="text-black bg-white px-2 py-1 rounded">${user.name}</span>
-            <span class="text-muted">(${user.role === 'admin' ? 'Administrador' : 'Empleado'})</span>
+            <span class="text-muted">(${roleText})</span>
         </div>
     `;
     
-    if (user.role === 'admin') {
+    // Admin y Coordinador ven el panel de administración
+    if (user.role === 'admin' || user.role === 'coordinator') {
         document.getElementById('employeeView').classList.add('hidden');
         document.getElementById('adminView').classList.remove('hidden');
-        loadEmployees();
+        
+        // Mostrar/ocultar botones según el rol
+        updateAdminUI(user.role);
+        
+        // Cargar datos según el rol
+        if (user.role === 'admin') {
+            loadEmployees(); // Admin puede ver y editar empleados
+        } else {
+            loadAllAttendance(); // Coordinador solo ve registros
+        }
     } else {
+        // Empleados y Ban ven su vista normal
         document.getElementById('employeeView').classList.remove('hidden');
         document.getElementById('adminView').classList.add('hidden');
         loadMyAttendance();
         getLocation();
+    }
+}
+
+// Función para actualizar la interfaz según el rol
+function updateAdminUI(userRole) {
+    // Botones que solo los administradores pueden ver
+    const adminOnlyButtons = [
+        'addEmployeeBtn',
+        'adminExitBtn'
+    ];
+    
+    adminOnlyButtons.forEach(btnId => {
+        const btn = document.getElementById(btnId);
+        if (btn) {
+            if (userRole === 'admin') {
+                btn.style.display = 'inline-block';
+            } else {
+                btn.style.display = 'none';
+            }
+        }
+    });
+    
+    // Mostrar información del rol SOLO para coordinadores
+    const roleInfo = document.getElementById('roleInfo');
+    if (userRole === 'coordinator') {
+        if (!roleInfo) {
+            const roleInfoDiv = document.createElement('div');
+            roleInfoDiv.id = 'roleInfo';
+            roleInfoDiv.className = 'alert alert-info mb-3';
+            roleInfoDiv.innerHTML = `
+                <i class="fas fa-info-circle me-2"></i>
+                <strong>Modo Coordinador</strong><br>
+                Puedes ver todos los registros de asistencia y horas extras, pero no puedes modificar datos de empleados.
+            `;
+            
+            // Insertar antes de la primera sección del admin
+            const adminView = document.getElementById('adminView');
+            const firstSection = adminView.querySelector('.mb-4');
+            if (firstSection) {
+                adminView.insertBefore(roleInfoDiv, firstSection);
+            }
+        }
+    } else {
+        // Si no es coordinador, eliminar el letrero si existe
+        if (roleInfo) {
+            roleInfo.remove();
+        }
     }
 }
 
@@ -642,6 +710,10 @@ function displayAttendanceRecords(records) {
         return;
     }
 
+    // Obtener el rol del usuario actual
+    const currentUser = JSON.parse(localStorage.getItem('progressUser'));
+    const userRole = currentUser ? currentUser.role : 'employee';
+
     // Agrupar registros por día para mostrar resumen de horas
     const dailyRecords = {};
     
@@ -690,10 +762,19 @@ function displayAttendanceRecords(records) {
             totalMinutes += diffMinutes;
         }
         
-        day.totalMinutes = totalMinutes;
-        day.regularHours = Math.min(9, Math.floor(totalMinutes / 60));
-        day.overtimeHours = Math.max(0, totalMinutes / 60 - 9);
-        day.displayTime = `${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}m`;
+        // Para usuarios ban, no calcular horas extras
+        if (userRole === 'ban') {
+            day.totalMinutes = 0;
+            day.regularHours = 0;
+            day.overtimeHours = 0;
+            day.displayTime = 'Sin Turno Fijo';
+        } else {
+            day.totalMinutes = totalMinutes;
+            day.regularHours = Math.min(9, Math.floor(totalMinutes / 60));
+            day.overtimeHours = Math.max(0, totalMinutes / 60 - 9);
+            day.displayTime = `${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}m`;
+        }
+        
         day.colombiaTime = formatDateTimeColombia(new Date(day.records[0].timestamp));
     });
 
@@ -702,7 +783,20 @@ function displayAttendanceRecords(records) {
     const totalOvertimeHours = Object.values(dailyRecords).reduce((sum, day) => sum + day.overtimeHours, 0);
     const daysWorked = Object.keys(dailyRecords).length;
 
-    const summaryHtml = `
+    // Para usuarios ban, mostrar resumen diferente
+    const summaryHtml = userRole === 'ban' ? `
+        <div class="row mb-4">
+            <div class="col-md-12">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h6 class="card-title">Estado de Registro</h6>
+                        <h4 class="text-info">Sin Turno Fijo</h4>
+                        <p class="text-muted mb-0">Usuario con rol Ban - No acumula horas extras</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    ` : `
         <div class="row mb-4">
             <div class="col-md-6">
                 <div class="card text-center">
@@ -824,31 +918,256 @@ function displayEmployees(employees) {
         return;
     }
     
-    tbody.innerHTML = employees.map(emp => `
-        <tr>
-            <td><span class="text-black bg-white px-2 py-1 rounded">${emp.id}</span></td>
-            <td><span class="text-black bg-white px-2 py-1 rounded">${emp.name}</span></td>
-            <td><span class="text-black bg-white px-2 py-1 rounded">${emp.email}</span></td>
-            <td><span class="text-black bg-white px-2 py-1 rounded">${emp.position || 'Jefe'}</span></td>
-            <td>
-                <span class="badge bg-${emp.role === 'admin' ? 'danger' : 'primary'}">
-                    ${emp.role === 'admin' ? 'Administrador' : 'Empleado'}
-                </span>
-            </td>
-            <td><span class="text-black bg-white px-2 py-1 rounded">${formatDateColombia(new Date(emp.created_at))}</span></td>
-            <td>
-                <button onclick="deleteEmployee(${emp.id}, '${emp.name}')" 
-                        class="btn btn-sm btn-outline-danger" 
-                        title="Eliminar Empleado">
-                    <i class="fas fa-trash me-1"></i>Eliminar
-                </button>
-            </td>
-        </tr>
-    `).join('');
+    // Obtener el rol del usuario actual
+    const currentUser = JSON.parse(localStorage.getItem('progressUser'));
+    const isAdmin = currentUser && currentUser.role === 'admin';
+    
+    tbody.innerHTML = employees.map(emp => {
+        // Determinar el color y texto del rol
+        let roleBadge = '';
+        if (emp.role === 'admin') {
+            roleBadge = '<span class="badge bg-danger">Administrador</span>';
+        } else if (emp.role === 'coordinator') {
+            roleBadge = '<span class="badge bg-warning text-dark">Coordinador</span>';
+        } else if (emp.role === 'ban') {
+            roleBadge = '<span class="badge bg-secondary">Ban</span>';
+        } else {
+            roleBadge = '<span class="badge bg-primary">Empleado</span>';
+        }
+        
+        // Botones de acción solo para administradores
+        const actionButtons = isAdmin ? `
+            <button onclick="changeEmployeeRole(${emp.id}, '${emp.name}', '${emp.role}')" 
+                    class="btn btn-sm btn-outline-warning me-1" 
+                    title="Cambiar Rol">
+                <i class="fas fa-user-tag me-1"></i>Rol
+            </button>
+            <button onclick="deleteEmployee(${emp.id}, '${emp.name}')" 
+                    class="btn btn-sm btn-outline-danger" 
+                    title="Eliminar Empleado">
+                <i class="fas fa-trash me-1"></i>Eliminar
+            </button>
+        ` : '<span class="text-muted">Solo vista</span>';
+        
+        return `
+            <tr>
+                <td><span class="text-black bg-white px-2 py-1 rounded">${emp.id}</span></td>
+                <td><span class="text-black bg-white px-2 py-1 rounded">${emp.name}</span></td>
+                <td><span class="text-black bg-white px-2 py-1 rounded">${emp.email}</span></td>
+                <td><span class="text-black bg-white px-2 py-1 rounded">${emp.position || 'Jefe'}</span></td>
+                <td>${roleBadge}</td>
+                <td><span class="text-black bg-white px-2 py-1 rounded">${formatDateColombia(new Date(emp.created_at))}</span></td>
+                <td>${actionButtons}</td>
+            </tr>
+        `;
+    }).join('');
+}
+
+// Función para cambiar el rol de un empleado
+function changeEmployeeRole(employeeId, employeeName, currentRole) {
+    const modalHtml = `
+        <div class="modal fade" id="changeRoleModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="fas fa-user-tag me-2"></i>
+                            Cambiar Rol de ${employeeName}
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Empleado:</strong> ${employeeName}<br>
+                            <strong>Rol Actual:</strong> <span class="badge ${getRoleBadgeClass(currentRole)}">${getRoleText(currentRole)}</span>
+                        </div>
+                        
+                        <form id="changeRoleForm">
+                            <div class="mb-3">
+                                <label for="newRole" class="form-label">
+                                    <i class="fas fa-user-tag me-1"></i>
+                                    Nuevo Rol
+                                </label>
+                                <select class="form-control" id="newRole" required>
+                                    <option value="">Selecciona un rol...</option>
+                                    <option value="employee" ${currentRole === 'employee' ? 'selected' : ''}>Empleado</option>
+                                    <option value="coordinator" ${currentRole === 'coordinator' ? 'selected' : ''}>Coordinador</option>
+                                    <option value="ban" ${currentRole === 'ban' ? 'selected' : ''}>Ban (Sin Turno Fijo)</option>
+                                    <option value="admin" ${currentRole === 'admin' ? 'selected' : ''}>Administrador</option>
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="roleReason" class="form-label">
+                                    <i class="fas fa-comment me-1"></i>
+                                    Motivo del Cambio
+                                </label>
+                                <textarea class="form-control" 
+                                          id="roleReason" 
+                                          rows="3" 
+                                          placeholder="Describe el motivo por el cual estás cambiando el rol de este empleado..."
+                                          required></textarea>
+                            </div>
+                            
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                <strong>Importante:</strong><br>
+                                • <strong>Empleado:</strong> Acumula horas extras normales<br>
+                                • <strong>Coordinador:</strong> Puede ver registros de otros empleados<br>
+                                • <strong>Ban:</strong> No acumula horas extras, solo registra asistencia<br>
+                                • <strong>Administrador:</strong> Control total del sistema
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            <i class="fas fa-times me-2"></i>Cancelar
+                        </button>
+                        <button type="button" class="btn btn-warning" onclick="updateEmployeeRole(${employeeId}, '${employeeName}')">
+                            <i class="fas fa-user-tag me-2"></i>Cambiar Rol
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Eliminar modal anterior si existe
+    const existingModal = document.getElementById('changeRoleModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    // Agregar nuevo modal al body
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    // Mostrar modal
+    const modal = new bootstrap.Modal(document.getElementById('changeRoleModal'));
+    modal.show();
+    
+    // Limpiar modal al cerrar
+    document.getElementById('changeRoleModal').addEventListener('hidden.bs.modal', function () {
+        this.remove();
+    });
+}
+
+// Función para obtener la clase del badge según el rol
+function getRoleBadgeClass(role) {
+    switch(role) {
+        case 'admin': return 'bg-danger';
+        case 'coordinator': return 'bg-warning text-dark';
+        case 'ban': return 'bg-secondary';
+        default: return 'bg-primary';
+    }
+}
+
+// Función para obtener el texto del rol
+function getRoleText(role) {
+    switch(role) {
+        case 'admin': return 'Administrador';
+        case 'coordinator': return 'Coordinador';
+        case 'ban': return 'Ban';
+        default: return 'Empleado';
+    }
+}
+
+// Función para actualizar el rol del empleado
+async function updateEmployeeRole(employeeId, employeeName) {
+    const newRole = document.getElementById('newRole').value;
+    const roleReason = document.getElementById('roleReason').value;
+    
+    // Depuración
+    console.log('🔍 Depuración de cambio de rol:', {
+        employeeId,
+        employeeName,
+        newRole,
+        roleReason,
+        newRoleLength: newRole ? newRole.length : 0,
+        roleReasonLength: roleReason ? roleReason.length : 0
+    });
+    
+    // Validar campos
+    if (!newRole || newRole.trim() === '') {
+        showCustomAlert('❌ Error', 'Por favor selecciona un rol', 'danger');
+        return;
+    }
+    
+    if (!roleReason || roleReason.trim() === '') {
+        showCustomAlert('❌ Error', 'Por favor proporciona un motivo', 'danger');
+        return;
+    }
+    
+    // Confirmación si es cambio a admin
+    if (newRole === 'admin') {
+        if (!confirm(`⚠️ ¿Estás seguro de convertir a ${employeeName} en Administrador?\n\nEsto le dará control total sobre el sistema, incluyendo:\n• Crear y eliminar empleados\n• Ver todos los registros\n• Cambiar roles de otros usuarios\n• Registrar salidas administrativas\n\nEsta acción no se puede deshacer fácilmente.`)) {
+            return;
+        }
+    }
+    
+    try {
+        console.log('🚀 Enviando solicitud de cambio de rol:', {
+            url: `${API_BASE}/admin/employees/${employeeId}/role`,
+            body: {
+                role: newRole,
+                reason: roleReason
+            }
+        });
+        
+        const response = await fetch(`${API_BASE}/admin/employees/${employeeId}/role`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('progressToken')}`
+            },
+            body: JSON.stringify({
+                role: newRole,
+                reason: roleReason
+            })
+        });
+        
+        console.log('📡 Respuesta del servidor:', response.status, response.statusText);
+        
+        const data = await response.json();
+        console.log('📋 Datos recibidos:', data);
+        
+        if (response.ok) {
+            // Cerrar modal
+            bootstrap.Modal.getInstance(document.getElementById('changeRoleModal')).hide();
+            
+            // Mostrar éxito
+            showCustomAlert(
+                '✅ Rol Actualizado', 
+                `El rol de ${employeeName} ha sido cambiado a ${getRoleText(newRole)}.\n\nMotivo: ${roleReason}\n\nCambio realizado por: ${JSON.parse(localStorage.getItem('progressUser')).name}`, 
+                'success'
+            );
+            
+            // Recargar lista de empleados
+            loadEmployees();
+            
+        } else {
+            console.error('❌ Error del servidor:', data);
+            showCustomAlert('❌ Error', data.error || 'Error al cambiar el rol del empleado', 'danger');
+        }
+    } catch (error) {
+        console.error('🚨 Error de conexión:', error);
+        showCustomAlert('❌ Error de Conexión', 'No se pudo cambiar el rol. Verifica tu conexión a internet.', 'danger');
+    }
 }
 
 async function loadAllAttendance() {
     try {
+        // Cargar empleados primero para tener la información de roles
+        const employeesResponse = await fetch(`${API_BASE}/admin/employees`, {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('progressToken')}`
+            }
+        });
+        
+        if (employeesResponse.ok) {
+            allEmployees = await employeesResponse.json();
+        }
+        
         const response = await fetch(`${API_BASE}/admin/attendance`, {
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('progressToken')}`
@@ -1118,6 +1437,31 @@ function showEmployeeDayDetails(employeeName, date) {
         new Date(a.timestamp) - new Date(b.timestamp)
     );
     
+    // Verificar si hay entrada sin salida
+    const hasOpenSession = sortedRecords.some(record => record.type === 'entry') && 
+                          !sortedRecords.some(record => record.type === 'exit');
+    
+    // Obtener el usuario actual para verificar si es admin
+    const currentUser = JSON.parse(localStorage.getItem('progressUser'));
+    const isAdmin = currentUser && currentUser.role === 'admin';
+    
+    // Buscar el rol del empleado para mostrar información correcta
+    const employeeInfo = allEmployees ? allEmployees.find(emp => emp.name === employeeName) : null;
+    const employeeRole = employeeInfo ? employeeInfo.role : 'employee';
+    
+    // Depuración
+    console.log('🔍 Depuración de rol ban:', {
+        employeeName,
+        employeeRole,
+        employeeInfo,
+        allEmployees: allEmployees ? allEmployees.length : 0
+    });
+    
+    // Calcular horas según el rol
+    const overtimeHours = employeeRole === 'ban' ? 0 : Math.max(0, Math.floor(calculateDayMinutes(sortedRecords, employeeRole) / 60) - 9);
+    const overtimeText = employeeRole === 'ban' ? 'Sin Turno Fijo' : `${overtimeHours}h`;
+    const overtimeColor = employeeRole === 'ban' ? 'info' : 'warning';
+    
     // Crear modal con detalles
     const modalHtml = `
         <div class="modal fade" id="dayDetailsModal" tabindex="-1">
@@ -1131,12 +1475,20 @@ function showEmployeeDayDetails(employeeName, date) {
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
+                        ${employeeRole === 'ban' ? `
+                            <div class="alert alert-info mb-3">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <strong>Usuario con Rol Ban</strong><br>
+                                Este usuario tiene un rol "Ban" y no acumula horas extras. Solo registra entradas y salidas sin turno fijo.
+                            </div>
+                        ` : ''}
+                        
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 <div class="card text-center">
                                     <div class="card-body">
                                         <h6 class="card-title">Horas Extras</h6>
-                                        <h4 class="text-warning">${Math.max(0, Math.floor(calculateDayMinutes(sortedRecords) / 60) - 9)}h</h4>
+                                        <h4 class="text-${overtimeColor}">${overtimeText}</h4>
                                     </div>
                                 </div>
                             </div>
@@ -1149,6 +1501,18 @@ function showEmployeeDayDetails(employeeName, date) {
                                 </div>
                             </div>
                         </div>
+                        
+                        ${hasOpenSession && isAdmin ? `
+                            <div class="alert alert-warning mb-3">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                <strong>Sesión Abierta Detectada</strong><br>
+                                Este empleado tiene una entrada sin salida registrada.
+                                <button onclick="showAdminExitForm('${employeeName}', '${date}')" 
+                                        class="btn btn-danger btn-sm ms-2">
+                                    <i class="fas fa-sign-out-alt me-1"></i>Registrar Salida Administrativa
+                                </button>
+                            </div>
+                        ` : ''}
                         
                         <div class="table-responsive">
                             <table class="table table-striped">
@@ -1239,7 +1603,468 @@ function showEmployeeDayDetails(employeeName, date) {
     });
 }
 
-function calculateDayMinutes(records) {
+// Función para mostrar formulario de salida administrativa
+function showAdminExitForm(employeeName, date) {
+    const modalHtml = `
+        <div class="modal fade" id="adminExitModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="fas fa-user-shield me-2"></i>
+                            Registrar Salida Administrativa
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Empleado:</strong> ${employeeName}<br>
+                            <strong>Fecha:</strong> ${new Date(date).toLocaleDateString('es-ES')}
+                        </div>
+                        
+                        <form id="adminExitForm">
+                            <div class="mb-3">
+                                <label for="exitTime" class="form-label">
+                                    <i class="fas fa-clock me-1"></i>
+                                    Hora de Salida Exacta
+                                </label>
+                                <input type="time" 
+                                       class="form-control" 
+                                       id="exitTime" 
+                                       required>
+                                <small class="text-muted">
+                                    Ingresa la hora exacta en la que el empleado finalizó su turno
+                                </small>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="exitReason" class="form-label">
+                                    <i class="fas fa-comment me-1"></i>
+                                    Motivo de Registro Administrativo
+                                </label>
+                                <select class="form-control" id="exitReason" required>
+                                    <option value="">Selecciona un motivo...</option>
+                                    <option value="olvido_salida">Empleado olvidó registrar salida</option>
+                                    <option value="problema_sistema">Problemas con el sistema</option>
+                                    <option value="emergencia">Emergencia personal</option>
+                                    <option value="otro">Otro motivo</option>
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3" id="otherReasonDiv" style="display: none;">
+                                <label for="otherReason" class="form-label">
+                                    <i class="fas fa-edit me-1"></i>
+                                    Especifica el motivo
+                                </label>
+                                <textarea class="form-control" 
+                                          id="otherReason" 
+                                          rows="3" 
+                                          placeholder="Describe el motivo del registro administrativo..."></textarea>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="adminNotes" class="form-label">
+                                    <i class="fas fa-sticky-note me-1"></i>
+                                    Notas Adicionales (Opcional)
+                                </label>
+                                <textarea class="form-control" 
+                                          id="adminNotes" 
+                                          rows="2" 
+                                          placeholder="Notas adicionales sobre este registro..."></textarea>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            <i class="fas fa-times me-2"></i>Cancelar
+                        </button>
+                        <button type="button" class="btn btn-primary" onclick="registerAdminExit('${employeeName}', '${date}')">
+                            <i class="fas fa-sign-out-alt me-2"></i>Registrar Salida
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Eliminar modal anterior si existe
+    const existingModal = document.getElementById('adminExitModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    // Agregar nuevo modal al body
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    // Cerrar modal de detalles actual
+    bootstrap.Modal.getInstance(document.getElementById('dayDetailsModal')).hide();
+    
+    // Mostrar modal de salida administrativa
+    const modal = new bootstrap.Modal(document.getElementById('adminExitModal'));
+    modal.show();
+    
+    // Manejar cambio en el selector de motivo
+    document.getElementById('exitReason').addEventListener('change', function() {
+        const otherReasonDiv = document.getElementById('otherReasonDiv');
+        if (this.value === 'otro') {
+            otherReasonDiv.style.display = 'block';
+            document.getElementById('otherReason').required = true;
+        } else {
+            otherReasonDiv.style.display = 'none';
+            document.getElementById('otherReason').required = false;
+            document.getElementById('otherReason').value = '';
+        }
+    });
+    
+    // Limpiar modal al cerrar
+    document.getElementById('adminExitModal').addEventListener('hidden.bs.modal', function () {
+        this.remove();
+        // Reabrir modal de detalles
+        showEmployeeDayDetails(employeeName, date);
+    });
+}
+
+// Función para mostrar selección de empleado para salida administrativa
+function showAdminExitSelection() {
+    // Obtener lista de empleados
+    fetch(`${API_BASE}/admin/employees`, {
+        headers: {
+            'Authorization': `Bearer ${localStorage.getItem('progressToken')}`
+        }
+    })
+    .then(response => response.json())
+    .then(employees => {
+        const modalHtml = `
+            <div class="modal fade" id="adminExitSelectionModal" tabindex="-1">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">
+                                <i class="fas fa-user-shield me-2"></i>
+                                Registrar Salida Administrativa
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                Selecciona el empleado y la fecha para registrar una salida administrativa.
+                            </div>
+                            
+                            <form id="adminExitSelectionForm">
+                                <div class="mb-3">
+                                    <label for="employeeSelect" class="form-label">
+                                        <i class="fas fa-user me-1"></i>
+                                        Seleccionar Empleado
+                                    </label>
+                                    <select class="form-control" id="employeeSelect" required>
+                                        <option value="">Selecciona un empleado...</option>
+                                        ${employees.map(emp => `
+                                            <option value="${emp.name}">${emp.name} - ${emp.position || 'Sin puesto'}</option>
+                                        `).join('')}
+                                    </select>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="exitDate" class="form-label">
+                                        <i class="fas fa-calendar me-1"></i>
+                                        Fecha de Salida
+                                    </label>
+                                    <input type="date" 
+                                           class="form-control" 
+                                           id="exitDate" 
+                                           required
+                                           max="${new Date().toISOString().split('T')[0]}"
+                                           value="${new Date().toISOString().split('T')[0]}">
+                                    <small class="text-muted">
+                                        Selecciona la fecha en la que el empleado finalizó su turno
+                                    </small>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="exitTime" class="form-label">
+                                        <i class="fas fa-clock me-1"></i>
+                                        Hora de Salida Exacta
+                                    </label>
+                                    <input type="time" 
+                                           class="form-control" 
+                                           id="exitTime" 
+                                           required>
+                                    <small class="text-muted">
+                                        Ingresa la hora exacta en la que el empleado finalizó su turno
+                                    </small>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="exitReason" class="form-label">
+                                        <i class="fas fa-comment me-1"></i>
+                                        Motivo de Registro Administrativo
+                                    </label>
+                                    <select class="form-control" id="exitReason" required>
+                                        <option value="">Selecciona un motivo...</option>
+                                        <option value="olvido_salida">Empleado olvidó registrar salida</option>
+                                        <option value="problema_sistema">Problemas con el sistema</option>
+                                        <option value="emergencia">Emergencia personal</option>
+                                        <option value="otro">Otro motivo</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="mb-3" id="otherReasonDiv" style="display: none;">
+                                    <label for="otherReason" class="form-label">
+                                        <i class="fas fa-edit me-1"></i>
+                                        Especifica el motivo
+                                    </label>
+                                    <textarea class="form-control" 
+                                              id="otherReason" 
+                                              rows="3" 
+                                              placeholder="Describe el motivo del registro administrativo..."></textarea>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="adminNotes" class="form-label">
+                                        <i class="fas fa-sticky-note me-1"></i>
+                                        Notas Adicionales (Opcional)
+                                    </label>
+                                    <textarea class="form-control" 
+                                              id="adminNotes" 
+                                              rows="2" 
+                                              placeholder="Notas adicionales sobre este registro..."></textarea>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                <i class="fas fa-times me-2"></i>Cancelar
+                            </button>
+                            <button type="button" class="btn btn-primary" onclick="registerAdminExitFromSelection()">
+                                <i class="fas fa-sign-out-alt me-2"></i>Registrar Salida
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Eliminar modal anterior si existe
+        const existingModal = document.getElementById('adminExitSelectionModal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+        
+        // Agregar nuevo modal al body
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        
+        // Mostrar modal
+        const modal = new bootstrap.Modal(document.getElementById('adminExitSelectionModal'));
+        modal.show();
+        
+        // Manejar cambio en el selector de motivo
+        document.getElementById('exitReason').addEventListener('change', function() {
+            const otherReasonDiv = document.getElementById('otherReasonDiv');
+            if (this.value === 'otro') {
+                otherReasonDiv.style.display = 'block';
+                document.getElementById('otherReason').required = true;
+            } else {
+                otherReasonDiv.style.display = 'none';
+                document.getElementById('otherReason').required = false;
+                document.getElementById('otherReason').value = '';
+            }
+        });
+        
+        // Limpiar modal al cerrar
+        document.getElementById('adminExitSelectionModal').addEventListener('hidden.bs.modal', function () {
+            this.remove();
+        });
+        
+    })
+    .catch(error => {
+        console.error('Error cargando empleados:', error);
+        showCustomAlert('❌ Error', 'No se pudo cargar la lista de empleados', 'danger');
+    });
+}
+
+// Función para registrar salida administrativa desde la selección
+async function registerAdminExitFromSelection() {
+    const employeeName = document.getElementById('employeeSelect').value;
+    const exitDate = document.getElementById('exitDate').value;
+    const exitTime = document.getElementById('exitTime').value;
+    const exitReason = document.getElementById('exitReason').value;
+    const otherReason = document.getElementById('otherReason').value;
+    const adminNotes = document.getElementById('adminNotes').value;
+    
+    // Validar campos
+    if (!employeeName || !exitDate || !exitTime || !exitReason) {
+        showCustomAlert('❌ Error', 'Por favor completa todos los campos obligatorios', 'danger');
+        return;
+    }
+    
+    if (exitReason === 'otro' && !otherReason) {
+        showCustomAlert('❌ Error', 'Por favor especifica el motivo', 'danger');
+        return;
+    }
+    
+    // Crear timestamp completo con la hora y fecha especificadas
+    const exitDateTime = new Date(`${exitDate}T${exitTime}`);
+    
+    // Obtener el usuario actual
+    const currentUser = JSON.parse(localStorage.getItem('progressUser'));
+    
+    // Mostrar loading
+    const registerButton = document.querySelector('button[onclick="registerAdminExitFromSelection()"]');
+    const originalText = registerButton.innerHTML;
+    registerButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Registrando...';
+    registerButton.disabled = true;
+    
+    try {
+        console.log('🚀 Enviando solicitud de salida administrativa:', {
+            employee_name: employeeName,
+            type: 'exit',
+            timestamp: exitDateTime.toISOString(),
+            admin_registered: true,
+            admin_id: currentUser.id,
+            admin_name: currentUser.name,
+            exit_reason: exitReason,
+            other_reason: otherReason || null,
+            admin_notes: adminNotes || null,
+            latitude: null,
+            longitude: null,
+            photo_path: null
+        });
+        
+        // Intentar conectar con el servidor
+        const response = await fetch(`${API_BASE}/admin/attendance`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('progressToken')}`
+            },
+            body: JSON.stringify({
+                employee_name: employeeName,
+                type: 'exit',
+                timestamp: exitDateTime.toISOString(),
+                admin_registered: true,
+                admin_id: currentUser.id,
+                admin_name: currentUser.name,
+                exit_reason: exitReason,
+                other_reason: otherReason || null,
+                admin_notes: adminNotes || null,
+                latitude: null,
+                longitude: null,
+                photo_path: null
+            })
+        });
+        
+        console.log('📡 Respuesta del servidor:', response.status, response.statusText);
+        
+        // Si el servidor no responde, guardar localmente
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('❌ Error del servidor:', errorText);
+            
+            // Guardar localmente como fallback
+            const localRecord = {
+                employee_name: employeeName,
+                type: 'exit',
+                timestamp: exitDateTime.toISOString(),
+                admin_registered: true,
+                admin_id: currentUser.id,
+                admin_name: currentUser.name,
+                exit_reason: exitReason,
+                other_reason: otherReason || null,
+                admin_notes: adminNotes || null,
+                latitude: null,
+                longitude: null,
+                photo_path: null,
+                local_save: true,
+                save_time: new Date().toISOString()
+            };
+            
+            // Guardar en localStorage
+            const localRecords = JSON.parse(localStorage.getItem('localAdminRecords') || '[]');
+            localRecords.push(localRecord);
+            localStorage.setItem('localAdminRecords', JSON.stringify(localRecords));
+            
+            // Cerrar modal
+            bootstrap.Modal.getInstance(document.getElementById('adminExitSelectionModal')).hide();
+            
+            // Mostrar advertencia pero con éxito
+            showCustomAlert(
+                '⚠️ Salida Registrada Localmente', 
+                `Se ha registrado la salida de ${employeeName} para las ${exitTime} del ${new Date(exitDate).toLocaleDateString('es-ES')}.\n\n⚠️ El servidor no está disponible, pero el registro se ha guardado localmente y se sincronizará cuando el servidor esté en línea.\n\nRegistrado por: ${currentUser.name}`, 
+                'warning'
+            );
+            
+            return;
+        }
+        
+        const data = await response.json();
+        console.log('📋 Datos recibidos:', data);
+        
+        // Cerrar modal de selección
+        bootstrap.Modal.getInstance(document.getElementById('adminExitSelectionModal')).hide();
+        
+        // Mostrar éxito
+        showCustomAlert(
+            '✅ Salida Registrada', 
+            `Se ha registrado la salida de ${employeeName} para las ${exitTime} del ${new Date(exitDate).toLocaleDateString('es-ES')}.\n\nEste registro fue creado administrativamente por ${currentUser.name}.`, 
+            'success'
+        );
+        
+        // Recargar datos
+        if (typeof loadAllAttendance === 'function') {
+            loadAllAttendance();
+        }
+        
+    } catch (error) {
+        console.error('🚨 Error de conexión:', error);
+        
+        // Guardar localmente como fallback
+        const localRecord = {
+            employee_name: employeeName,
+            type: 'exit',
+            timestamp: exitDateTime.toISOString(),
+            admin_registered: true,
+            admin_id: currentUser.id,
+            admin_name: currentUser.name,
+            exit_reason: exitReason,
+            other_reason: otherReason || null,
+            admin_notes: adminNotes || null,
+            latitude: null,
+            longitude: null,
+            photo_path: null,
+            local_save: true,
+            save_time: new Date().toISOString(),
+            error: error.message
+        };
+        
+        // Guardar en localStorage
+        const localRecords = JSON.parse(localStorage.getItem('localAdminRecords') || '[]');
+        localRecords.push(localRecord);
+        localStorage.setItem('localAdminRecords', JSON.stringify(localRecords));
+        
+        // Cerrar modal
+        bootstrap.Modal.getInstance(document.getElementById('adminExitSelectionModal')).hide();
+        
+        // Mostrar advertencia pero con éxito local
+        showCustomAlert(
+            '⚠️ Salida Registrada Localmente', 
+            `Se ha registrado la salida de ${employeeName} para las ${exitTime} del ${new Date(exitDate).toLocaleDateString('es-ES')}.\n\n⚠️ El servidor no está disponible, pero el registro se ha guardado localmente y se sincronizará cuando el servidor esté en línea.\n\nRegistrado por: ${currentUser.name}\n\nError: ${error.message}`, 
+            'warning'
+        );
+    } finally {
+        // Restaurar botón
+        registerButton.innerHTML = originalText;
+        registerButton.disabled = false;
+    }
+}
+
+function calculateDayMinutes(records, employeeRole = 'employee') {
+    // Si el rol es 'ban', no acumular horas extras
+    if (employeeRole === 'ban') {
+        return 0; // Usuarios ban no acumulan minutos
+    }
+    
     let totalMinutes = 0;
     let entryTime = null;
     
@@ -1269,14 +2094,21 @@ function calculateDayMinutes(records) {
     return totalMinutes;
 }
 
-function calculateDayTotal(records) {
-    const totalMinutes = calculateDayMinutes(records);
+function calculateDayTotal(records, employeeRole = 'employee') {
+    const totalMinutes = calculateDayMinutes(records, employeeRole);
+    
+    // Para usuarios ban, mostrar mensaje especial
+    if (employeeRole === 'ban') {
+        return 'Sin Turno Fijo';
+    }
+    
     const hours = Math.floor(totalMinutes / 60);
     const minutes = totalMinutes % 60;
     return `${hours}h ${minutes}m`;
 }
 
 let allAttendanceRecords = [];
+let allEmployees = [];
 
 async function showLocationOnMap(latitude, longitude, employeeName) {
     const mapsUrl = `https://www.google.com/maps?q=${latitude},${longitude}&z=18`;
@@ -1849,6 +2681,12 @@ function addTestNotificationButton() {
         existingButton.remove();
     }
     
+    // Eliminar botón de prueba de salida administrativa si existe
+    const existingAdminButton = document.getElementById('adminTestButton');
+    if (existingAdminButton) {
+        existingAdminButton.remove();
+    }
+    
     // Crear botón de prueba más visible
     const testButton = document.createElement('button');
     testButton.id = 'testNotificationButton';
@@ -1931,4 +2769,24 @@ function emulateNotification() {
     );
     
     console.log('📱 Notificación emulada:', randomNotification.title);
+}
+
+// Función para mostrar la sección de empleados
+function showEmployees() {
+    // Ocultar todas las secciones
+    document.getElementById('employeesSection').classList.remove('hidden');
+    document.getElementById('attendanceSection').classList.add('hidden');
+    
+    // Cargar empleados si no se han cargado
+    loadEmployees();
+}
+
+// Función para mostrar la sección de todos los registros
+function showAllAttendance() {
+    // Ocultar todas las secciones
+    document.getElementById('employeesSection').classList.add('hidden');
+    document.getElementById('attendanceSection').classList.remove('hidden');
+    
+    // Cargar todos los registros
+    loadAllAttendance();
 }
