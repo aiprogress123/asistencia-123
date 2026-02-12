@@ -45,7 +45,7 @@ const API_BASE = window.location.origin + '/api';
 
 // Función para mostrar alertas personalizadas con estilo
 function showCustomAlert(title, message, type = 'info') {
-    // Crear modal personalizado
+    // Crear modal personalizado más llamativo
     const modalHtml = `
         <div id="customAlertModal" style="
             position: fixed;
@@ -53,70 +53,85 @@ function showCustomAlert(title, message, type = 'info') {
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.5);
+            background: rgba(0, 0, 0, 0.8);
             z-index: 9999;
             display: flex;
             align-items: center;
             justify-content: center;
             backdrop-filter: blur(5px);
+            animation: modalFadeIn 0.3s ease-out;
         ">
             <div style="
-                background: linear-gradient(135deg, rgba(0, 212, 255, 0.95), rgba(0, 168, 204, 0.95));
-                border: 2px solid rgba(0, 212, 255, 0.3);
-                border-radius: 15px;
-                padding: 2rem;
-                max-width: 400px;
+                background: ${type === 'danger' ? 'linear-gradient(135deg, rgba(255, 0, 0, 0.95), rgba(255, 100, 100, 0.95))' : 
+                          type === 'warning' ? 'linear-gradient(135deg, rgba(255, 150, 0, 0.95), rgba(255, 200, 100, 0.95))' : 
+                          'linear-gradient(135deg, rgba(0, 212, 255, 0.95), rgba(0, 168, 204, 0.95))'};
+                border: 3px solid ${type === 'danger' ? '#ff0000' : type === 'warning' ? '#ff9800' : '#00d4ff'};
+                border-radius: 20px;
+                padding: 2.5rem;
+                max-width: 450px;
                 width: 90%;
-                box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+                box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4);
                 backdrop-filter: blur(10px);
                 position: relative;
                 overflow: hidden;
+                animation: modalSlideIn 0.5s ease-out, modalPulse 2s ease-in-out infinite;
             ">
                 <div style="
                     position: absolute;
                     top: 0;
-                    left: 0;
+                    left: -100%;
                     width: 100%;
-                    height: 4px;
-                    background: linear-gradient(90deg, #00d4ff, #00a8cc);
-                    animation: shimmer 2s ease-in-out infinite;
+                    height: 100%;
+                    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+                    animation: shimmer 1.5s linear infinite;
                 "></div>
                 
                 <div style="
                     text-align: center;
-                    margin-bottom: 1.5rem;
+                    margin-bottom: 2rem;
+                    position: relative;
+                    z-index: 10;
                 ">
                     <div style="
-                        font-size: 2rem;
-                        margin-bottom: 0.5rem;
-                        color: #00d4ff;
-                        text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+                        font-size: 2.5rem;
+                        margin-bottom: 1rem;
+                        color: ${type === 'danger' ? '#ffffff' : type === 'warning' ? '#ffffff' : '#00d4ff'};
+                        text-shadow: 0 0 20px rgba(255, 255, 255, 0.8);
+                        animation: titlePulse 1s ease-in-out infinite;
                     ">${title}</div>
                     
                     <div style="
                         color: #ffffff;
-                        font-size: 1rem;
-                        line-height: 1.5;
-                        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+                        font-size: 1.1rem;
+                        line-height: 1.6;
+                        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+                        font-weight: 600;
+                        animation: textGlow 2s ease-in-out infinite;
                     ">${message}</div>
                 </div>
                 
                 <div style="
                     text-align: center;
-                    margin-top: 1.5rem;
+                    margin-top: 2rem;
+                    position: relative;
+                    z-index: 10;
                 ">
                     <button onclick="closeCustomAlert()" style="
-                        background: linear-gradient(45deg, #00d4ff, #00a8cc);
-                        border: none;
+                        background: linear-gradient(45deg, ${type === 'danger' ? '#ff0000' : type === 'warning' ? '#ff9800' : '#00d4ff'}, ${type === 'danger' ? '#cc0000' : type === 'warning' ? '#cc7700' : '#00a8cc'});
+                        border: 2px solid #ffffff;
                         color: white;
-                        padding: 0.75rem 2rem;
-                        border-radius: 8px;
-                        font-weight: 600;
+                        padding: 1rem 2.5rem;
+                        border-radius: 15px;
+                        font-weight: 700;
                         cursor: pointer;
                         transition: all 0.3s ease;
-                        box-shadow: 0 4px 15px rgba(0, 212, 255, 0.3);
+                        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+                        font-size: 1.1rem;
+                        text-transform: uppercase;
+                        letter-spacing: 1px;
+                        animation: buttonPulse 1.5s ease-in-out infinite;
                     ">
-                        <i class="fas fa-check me-2"></i>Entendido
+                        <i class="fas fa-check me-2"></i>ENTENDIDO
                     </button>
                 </div>
             </div>
@@ -126,17 +141,73 @@ function showCustomAlert(title, message, type = 'info') {
     // Agregar al DOM
     document.body.insertAdjacentHTML('beforeend', modalHtml);
     
-    // Agregar estilos CSS para animación
+    // Agregar estilos CSS para animaciones
     const style = document.createElement('style');
     style.textContent = `
+        @keyframes modalFadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes modalSlideIn {
+            from { 
+                transform: scale(0.5) translateY(-50px); 
+                opacity: 0; 
+            }
+            to { 
+                transform: scale(1) translateY(0); 
+                opacity: 1; 
+            }
+        }
+        
+        @keyframes modalPulse {
+            0%, 100% { 
+                box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4); 
+            }
+            50% { 
+                box-shadow: 0 30px 60px ${type === 'danger' ? 'rgba(255, 0, 0, 0.6)' : type === 'warning' ? 'rgba(255, 150, 0, 0.6)' : 'rgba(0, 212, 255, 0.6)'}; 
+            }
+        }
+        
         @keyframes shimmer {
             0% { transform: translateX(-100%); }
-            100% { transform: translateX(100%); }
+            100% { transform: translateX(200%); }
+        }
+        
+        @keyframes titlePulse {
+            0%, 100% { 
+                transform: scale(1); 
+                text-shadow: 0 0 20px rgba(255, 255, 255, 0.8); 
+            }
+            50% { 
+                transform: scale(1.05); 
+                text-shadow: 0 0 30px rgba(255, 255, 255, 1); 
+            }
+        }
+        
+        @keyframes textGlow {
+            0%, 100% { 
+                text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8); 
+            }
+            50% { 
+                text-shadow: 0 2px 8px rgba(0, 0, 0, 1); 
+            }
+        }
+        
+        @keyframes buttonPulse {
+            0%, 100% { 
+                transform: scale(1); 
+                box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3); 
+            }
+            50% { 
+                transform: scale(1.05); 
+                box-shadow: 0 12px 35px rgba(0, 0, 0, 0.5); 
+            }
         }
         
         #customAlertModal button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(0, 212, 255, 0.4);
+            transform: scale(1.1) translateY(-3px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.6);
         }
     `;
     document.head.appendChild(style);
@@ -758,7 +829,7 @@ function displayEmployees(employees) {
             <td><span class="text-black bg-white px-2 py-1 rounded">${emp.id}</span></td>
             <td><span class="text-black bg-white px-2 py-1 rounded">${emp.name}</span></td>
             <td><span class="text-black bg-white px-2 py-1 rounded">${emp.email}</span></td>
-            <td><span class="text-black bg-white px-2 py-1 rounded">${emp.position || 'N/A'}</span></td>
+            <td><span class="text-black bg-white px-2 py-1 rounded">${emp.position || 'Jefe'}</span></td>
             <td>
                 <span class="badge bg-${emp.role === 'admin' ? 'danger' : 'primary'}">
                     ${emp.role === 'admin' ? 'Administrador' : 'Empleado'}
@@ -882,21 +953,26 @@ function displayAllAttendance(records) {
 
     Object.values(employeeStats).forEach(emp => {
         summaryHtml += `
-            <div class="col-md-4 mb-3">
-                <div class="card text-center">
+            <div class="col-md-6 mb-4">
+                <div class="card text-center" style="min-height: 200px;">
                     <div class="card-body">
                         <h6 class="card-title">
-                            <span class="text-black bg-white px-2 py-1 rounded">${emp.employee_name}</span><br>
-                            <span class="text-black bg-white px-2 py-1 rounded">${emp.position || 'N/A'}</span>
-                        </h6>
-                        <div class="mt-2">
                             <div class="mb-2">
-                                <small class="text-muted">Días Trabajados</small>
-                                <h5 class="text-success mb-0">${emp.days_worked}</h5>
+                                <span class="text-black bg-white px-2 py-1 rounded" style="font-size: 0.9rem;">${emp.employee_name}</span>
                             </div>
                             <div>
-                                <small class="text-muted">Horas Extras</small>
-                                <h5 class="text-warning mb-0">${emp.total_overtime.toFixed(1)}h</h5>
+                                <small class="text-muted" style="font-size: 0.75rem;">Puesto:</small><br>
+                                <span class="text-black bg-white px-2 py-1 rounded" style="font-size: 0.8rem;">${emp.position || 'Jefe'}</span>
+                            </div>
+                        </h6>
+                        <div class="mt-3">
+                            <div class="mb-2">
+                                <small class="text-muted" style="font-size: 0.75rem;">Días Trabajados</small>
+                                <h5 class="text-success mb-0" style="font-size: 1.2rem;">${emp.days_worked}</h5>
+                            </div>
+                            <div>
+                                <small class="text-muted" style="font-size: 0.75rem;">Horas Extras</small>
+                                <h5 class="text-warning mb-0" style="font-size: 1.2rem;">${emp.total_overtime.toFixed(1)}h</h5>
                             </div>
                         </div>
                     </div>
@@ -990,7 +1066,7 @@ function displayAllAttendance(records) {
                     </span>
                 </td>
                 <td>
-                    <small class="text-muted">${day.records.length} registros</small>
+                    <small class="text-black bg-white px-2 py-1 rounded">${day.records.length} registros</small>
                 </td>
                 <td>
                     <button onclick="showEmployeeDayDetails('${day.employee_name}', '${day.date}')" 
@@ -1056,23 +1132,7 @@ function showEmployeeDayDetails(employeeName, date) {
                     </div>
                     <div class="modal-body">
                         <div class="row mb-3">
-                            <div class="col-md-3">
-                                <div class="card text-center">
-                                    <div class="card-body">
-                                        <h6 class="card-title">Total del Día</h6>
-                                        <h4 class="text-primary">${calculateDayTotal(sortedRecords)}</h4>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="card text-center">
-                                    <div class="card-body">
-                                        <h6 class="card-title">Horas Normales</h6>
-                                        <h4 class="text-success">${Math.min(9, Math.floor(calculateDayMinutes(sortedRecords) / 60))}h</h4>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
+                            <div class="col-md-6">
                                 <div class="card text-center">
                                     <div class="card-body">
                                         <h6 class="card-title">Horas Extras</h6>
@@ -1080,7 +1140,7 @@ function showEmployeeDayDetails(employeeName, date) {
                                     </div>
                                 </div>
                             </div>
-                            <div class="col-md-3">
+                            <div class="col-md-6">
                                 <div class="card text-center">
                                     <div class="card-body">
                                         <h6 class="card-title">Registros</h6>
@@ -1404,9 +1464,471 @@ async function loadMyAttendance() {
         
         const records = await response.json();
         displayAttendanceRecords(records);
+        
+        // Verificar si hay sesión abierta y configurar recordatorios
+        checkOpenSessionAndSetReminders(records);
     } catch (error) {
         console.error('Error cargando asistencia:', error);
         document.getElementById('attendanceRecords').innerHTML = 
             '<p class="text-danger">Error al cargar registros</p>';
     }
+}
+
+// Función para verificar sesión abierta y configurar recordatorios
+function checkOpenSessionAndSetReminders(records) {
+    if (records.length === 0) return;
+    
+    // Ordenar registros por timestamp
+    const sortedRecords = records.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    const lastRecord = sortedRecords[0];
+    
+    // Verificar si el último registro es una entrada sin salida
+    if (lastRecord.type === 'entry') {
+        const entryTime = new Date(lastRecord.timestamp);
+        const now = new Date();
+        const hoursSinceEntry = (now - entryTime) / (1000 * 60 * 60);
+        
+        // Si han pasado más de 9 horas, mostrar recordatorio
+        if (hoursSinceEntry > 9) {
+            showSessionReminder();
+        }
+        
+        // Configurar recordatorios automáticos
+        setupAutomaticReminders(entryTime);
+    }
+}
+
+// Función para mostrar recordatorio de sesión abierta
+function showSessionReminder() {
+    // Verificar si ya se mostró el recordatorio recientemente
+    const lastReminder = localStorage.getItem('lastSessionReminder');
+    const now = Date.now();
+    
+    if (lastReminder && (now - parseInt(lastReminder)) < 60 * 60 * 1000) {
+        return; // No mostrar si pasó menos de 60 minutos
+    }
+    
+    // Guardar timestamp del último recordatorio
+    localStorage.setItem('lastSessionReminder', now.toString());
+    
+    // Mostrar notificación personalizada
+    showCustomAlert(
+        '⏰ SESIÓN ABIERTA DETECTADA', 
+        'Parece que tienes una sesión de trabajo abierta.<br><br>Por favor registra tu salida para evitar errores en el cálculo de horas extras.', 
+        'warning'
+    );
+    
+    // Enviar notificación del navegador si está permitido
+    sendBrowserNotification('Sesión Abierta', 'Registra tu salida para evitar errores en horas extras');
+}
+
+// Función para enviar notificación del navegador
+function sendBrowserNotification(title, body) {
+    // Verificar si el navegador soporta notificaciones
+    if (!("Notification" in window)) {
+        console.log("Este navegador no soporta notificaciones");
+        return;
+    }
+    
+    // Solicitar permiso si no se ha concedido
+    if (Notification.permission === "default") {
+        Notification.requestPermission().then(permission => {
+            if (permission === "granted") {
+                createNotification(title, body);
+            }
+        });
+    } else if (Notification.permission === "granted") {
+        createNotification(title, body);
+    }
+}
+
+// Función para crear notificación
+function createNotification(title, body) {
+    // Reproducir sonido de notificación
+    playNotificationSound();
+    
+    const notification = new Notification(title, {
+        body: body,
+        icon: '/favicon.ico',
+        badge: '/favicon.ico',
+        tag: 'session-reminder',
+        requireInteraction: true,
+        sound: '/notification-sound.mp3' // Sonido para navegadores que lo soporten
+    });
+    
+    // Cerrar notificación después de 10 segundos
+    setTimeout(() => {
+        notification.close();
+    },10000);
+    
+    // Redirigir al hacer clic en la notificación
+    notification.onclick = function() {
+        window.focus();
+        notification.close();
+    };
+}
+
+// Función para reproducir sonido de notificación
+function playNotificationSound() {
+    try {
+        // Crear audio con sonido de notificación del sistema
+        const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSl+zPLTgjMGHm7A7+OZURE');
+        
+        // Configurar audio
+        audio.volume = 1.0; // 100% de volumen
+        audio.playbackRate = 1.0; // Velocidad normal
+        audio.loop = true; // Repetir automáticamente
+        
+        // Reproducir sonido y mantenerlo sonando
+        audio.play().catch(error => {
+            console.log('No se pudo reproducir sonido:', error);
+            // Si falla, intentar con sonido alternativo
+            playAlternativeSound();
+        });
+        
+        // Detener después de 5 segundos
+        setTimeout(() => {
+            if (audio && !audio.paused) {
+                audio.pause();
+                audio.loop = false;
+            }
+        }, 5000);
+        
+    } catch (error) {
+        console.log('Error al crear audio:', error);
+        playAlternativeSound();
+    }
+}
+
+// Función para sonido alternativo (alarma de atención máxima)
+function playAlternativeSound() {
+    try {
+        // Usar Web Audio API para generar una alarma de atención máxima
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        
+        // Crear múltiples osciladores para un sonido rico
+        const primaryOsc = audioContext.createOscillator();
+        const secondaryOsc = audioContext.createOscillator();
+        const tertiaryOsc = audioContext.createOscillator();
+        const noiseOsc = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        // Conectar osciladores
+        primaryOsc.connect(gainNode);
+        secondaryOsc.connect(gainNode);
+        tertiaryOsc.connect(gainNode);
+        noiseOsc.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        // Configurar oscilador principal (tono de atención)
+        primaryOsc.frequency.value = 1500; // Muy agudo
+        primaryOsc.type = 'square'; // Penetrante
+        
+        // Configurar oscilador secundario (armonía)
+        secondaryOsc.frequency.value = 750; // Medio
+        secondaryOsc.type = 'sawtooth'; // Rico en armónicos
+        
+        // Configurar oscilador terciario (bajo)
+        tertiaryOsc.frequency.value = 375; // Muy bajo
+        tertiaryOsc.type = 'triangle'; // Suave
+        
+        // Configurar ruido blanco para atención
+        noiseOsc.type = 'square';
+        noiseOsc.frequency.value = 2000; // Ultra agudo
+        
+        // Mezclar tonos con diferentes ganancias
+        const primaryGain = audioContext.createGain();
+        const secondaryGain = audioContext.createGain();
+        const tertiaryGain = audioContext.createGain();
+        const noiseGain = audioContext.createGain();
+        
+        primaryOsc.connect(primaryGain);
+        secondaryOsc.connect(secondaryGain);
+        tertiaryOsc.connect(tertiaryGain);
+        noiseOsc.connect(noiseGain);
+        
+        primaryGain.connect(gainNode);
+        secondaryGain.connect(gainNode);
+        tertiaryGain.connect(gainNode);
+        noiseGain.connect(gainNode);
+        
+        primaryGain.gain.value = 0.6; // 60% principal
+        secondaryGain.gain.value = 0.3; // 30% armonía
+        tertiaryGain.gain.value = 0.2; // 20% bajo
+        noiseGain.gain.value = 0.1; // 10% ruido
+        
+        // Configurar volumen al máximo
+        gainNode.gain.setValueAtTime(1.0, audioContext.currentTime);
+        
+        // Crear patrón de alarma de atención máxima
+        const startTime = audioContext.currentTime;
+        const alarmPattern = [
+            { time: 0.0, gain: 1.0 },      // Explosión inicial
+            { time: 0.1, gain: 0.8 },      // Baja rápida
+            { time: 0.2, gain: 1.0 },      // Segunda explosión
+            { time: 0.3, gain: 0.6 },      // Baja
+            { time: 0.4, gain: 1.0 },      // Tercera explosión
+            { time: 0.5, gain: 0.4 },      // Baja
+            { time: 0.6, gain: 0.8 },      // Cuarta explosión
+            { time: 0.7, gain: 0.3 },      // Baja
+            { time: 0.8, gain: 0.6 },      // Quinta explosión
+            { time: 0.9, gain: 0.2 },      // Baja
+            { time: 1.0, gain: 0.4 },      // Sexta explosión
+            { time: 1.1, gain: 0.1 },      // Baja
+            { time: 1.2, gain: 0.2 },      // Séptima explosión
+            { time: 1.3, gain: 0.1 },      // Baja
+            { time: 1.4, gain: 0.3 },      // Octava explosión
+            { time: 1.5, gain: 0.1 },      // Baja
+            { time: 1.6, gain: 0.2 },      // Novena explosión
+            { time: 1.7, gain: 0.1 },      // Baja
+            { time: 1.8, gain: 0.3 },      // Décima explosión
+            { time: 1.9, gain: 0.1 },      // Baja
+            { time: 2.0, gain: 0.2 },      // Undécima explosión
+            { time: 2.1, gain: 0.1 },      // Baja
+            { time: 2.2, gain: 0.3 },      // Duodécima explosión
+            { time: 2.3, gain: 0.1 },      // Baja
+            { time: 2.4, gain: 0.2 },      // Decimotercera explosión
+            { time: 2.5, gain: 0.1 },      // Baja
+            { time: 2.6, gain: 0.3 },      // Decimocuarta explosión
+            { time: 2.7, gain: 0.1 },      // Baja
+            { time: 2.8, gain: 0.2 },      // Decimoquinta explosión
+            { time: 2.9, gain: 0.1 },      // Baja
+            { time: 3.0, gain: 0.3 },      // Decimosexta explosión
+            { time: 3.1, gain: 0.1 },      // Baja
+            { time: 3.2, gain: 0.2 },      // Decimoséptima explosión
+            { time: 3.3, gain: 0.1 },      // Baja
+            { time: 3.4, gain: 0.2 },      // Decimoctava explosión
+            { time: 3.5, gain: 0.1 },      // Baja
+            { time: 3.6, gain: 0.2 },      // Decimonovena explosión
+            { time: 3.7, gain: 0.1 },      // Baja
+            { time: 3.8, gain: 0.2 },      // Vigésima explosión
+            { time: 3.9, gain: 0.1 },      // Baja
+            { time: 4.0, gain: 0.2 },      // Vigésimo primera explosión
+            { time: 4.1, gain: 0.1 },      // Baja
+            { time: 4.2, gain: 0.2 },      // Vigésimo segunda explosión
+            { time: 4.3, gain: 0.1 },      // Baja
+            { time: 4.4, gain: 0.2 },      // Vigésimo tercera explosión
+            { time: 4.5, gain: 0.1 },      // Baja
+            { time: 4.6, gain: 0.2 },      // Vigésimo cuarta explosión
+            { time: 4.7, gain: 0.1 },      // Baja
+            { time: 4.8, gain: 0.2 },      // Vigésimo quinta explosión
+            { time: 4.9, gain: 0.1 },      // Baja
+            { time: 5.0, gain: 0.0 }       // Silencio final
+        ];
+        
+        // Programar el patrón de alarma de atención máxima
+        alarmPattern.forEach(point => {
+            gainNode.gain.linearRampToValueAtTime(
+                point.gain, 
+                startTime + point.time
+            );
+        });
+        
+        // Iniciar osciladores
+        primaryOsc.start(startTime);
+        secondaryOsc.start(startTime);
+        tertiaryOsc.start(startTime);
+        noiseOsc.start(startTime);
+        
+        // Detener después de 5 segundos
+        primaryOsc.stop(startTime + 5.0);
+        secondaryOsc.stop(startTime + 5.0);
+        tertiaryOsc.stop(startTime + 5.0);
+        noiseOsc.stop(startTime + 5.0);
+        
+    } catch (error) {
+        console.log('Error en sonido alternativo:', error);
+        // Último recurso: vibración de emergencia
+        if ('vibrate' in navigator) {
+            // Patrón de vibración de emergencia (muy intenso)
+            navigator.vibrate([
+                1000, 500, 1000, 500, 1000, 500, 1000, 500, 1000, 500,
+                1000, 500, 1000, 500, 1000, 500, 1000, 500, 1000, 500,
+                1000, 500, 1000, 500, 1000, 500, 1000, 500, 1000, 500
+            ]);
+        }
+    }
+}
+
+// Función para configurar recordatorios automáticos
+function setupAutomaticReminders(entryTime) {
+    // Limpiar recordatorios existentes
+    clearExistingReminders();
+    
+    const now = new Date();
+    const entryHour = entryTime.getHours();
+    
+    // Configurar recordatorio para fin de jornada (6:00 PM)
+    const endOfDayReminder = new Date(now);
+    endOfDayReminder.setHours(18, 0, 0, 0);
+    
+    if (endOfDayReminder > now) {
+        const endOfDayTimeout = endOfDayReminder - now;
+        setTimeout(() => {
+            sendBrowserNotification('Fin de Jornada', 'No olvides registrar tu salida');
+        }, endOfDayTimeout);
+    }
+    
+    // Configurar recordatorio tardío (8:00 PM)
+    const lateReminder = new Date(now);
+    lateReminder.setHours(20, 0, 0, 0);
+    
+    if (lateReminder > now) {
+        const lateTimeout = lateReminder - now;
+        setTimeout(() => {
+            showCustomAlert(
+                '🚨 RECORDATORIO URGENTE', 
+                '¡Aún tienes tu sesión de trabajo abierta!<br><br>Por favor registra tu salida inmediatamente para evitar problemas con tus horas extras.', 
+                'danger'
+            );
+            sendBrowserNotification('Urgente: Sesión Abierta', 'Registra tu salida ahora');
+        }, lateTimeout);
+    }
+    
+    // Configurar recordatorios periódicos (cada 60 minutos después de las 9 horas)
+    const hoursSinceEntry = (now - entryTime) / (1000 * 60 * 60);
+    if (hoursSinceEntry > 9) {
+        setInterval(() => {
+            sendBrowserNotification('Sesión Abierta', 'Recuerda registrar tu salida');
+        }, 60 * 60 * 1000); // Cada 60 minutos
+    }
+}
+
+// Función para limpiar recordatorios existentes
+function clearExistingReminders() {
+    // Limpiar timeouts y intervals existentes
+    for (let i = 1; i < 99999; i++) {
+        clearTimeout(i);
+        clearInterval(i);
+    }
+}
+
+// Función para solicitar permiso de notificaciones al cargar la página
+function requestNotificationPermission() {
+    if ("Notification" in window && Notification.permission === "default") {
+        Notification.requestPermission().then(permission => {
+            if (permission === "granted") {
+                console.log("Permiso de notificaciones concedido");
+                showCustomAlert('✅ Notificaciones Activadas', 'Recibirás recordatorios para registrar tu salida', 'success');
+            }
+        });
+    }
+}
+
+// Solicitar permiso de notificaciones después del login
+document.addEventListener('DOMContentLoaded', function() {
+    const token = localStorage.getItem('progressToken');
+    if (token) {
+        const user = JSON.parse(localStorage.getItem('progressUser'));
+        loginSuccess(user, token);
+        
+        // Solicitar permiso de notificaciones
+        setTimeout(() => {
+            requestNotificationPermission();
+        }, 2000);
+    }
+    
+    // Agregar botón de prueba de notificaciones (solo para desarrollo)
+    setTimeout(() => {
+        addTestNotificationButton();
+    }, 3000);
+});
+
+// Función para agregar botón de prueba de notificaciones
+function addTestNotificationButton() {
+    // Verificar si el usuario está logueado
+    const token = localStorage.getItem('progressToken');
+    if (!token) {
+        console.log('❌ Usuario no logueado, no se agrega botón de prueba');
+        return;
+    }
+    
+    // Eliminar botón existente si hay uno
+    const existingButton = document.getElementById('testNotificationButton');
+    if (existingButton) {
+        existingButton.remove();
+    }
+    
+    // Crear botón de prueba más visible
+    const testButton = document.createElement('button');
+    testButton.id = 'testNotificationButton';
+    testButton.innerHTML = '<i class="fas fa-bell me-2"></i>🔔 PROBAR ALARMA';
+    testButton.className = 'btn btn-danger btn-lg position-fixed';
+    testButton.style.cssText = `
+        top: 20px;
+        right: 20px;
+        z-index: 9999;
+        box-shadow: 0 6px 20px rgba(255, 0, 0, 0.5);
+        border: 3px solid #ffffff;
+        font-weight: bold;
+        font-size: 1.1rem;
+        padding: 12px 20px;
+        border-radius: 10px;
+        animation: buttonPulse 2s ease-in-out infinite;
+        background: linear-gradient(45deg, #ff0000, #cc0000);
+        color: white;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    `;
+    
+    // Agregar evento de clic
+    testButton.onclick = function() {
+        console.log('🚀 Botón de prueba presionado');
+        emulateNotification();
+    };
+    
+    // Agregar al body
+    document.body.appendChild(testButton);
+    
+    console.log('🔔 Botón de prueba de notificaciones agregado exitosamente');
+    console.log('📍 Botón ID:', testButton.id);
+    console.log('🎨 Estilos aplicados:', testButton.style.cssText);
+}
+
+// Función para emular notificación
+function emulateNotification() {
+    console.log('🚀 Iniciando emulación de notificación...');
+    
+    // Mostrar diferentes tipos de notificaciones
+    const notificationTypes = [
+        {
+            title: '⏰ SESIÓN ABIERTA DETECTADA',
+            message: 'Parece que tienes una sesión de trabajo abierta.<br><br>Por favor registra tu salida para evitar errores en el cálculo de horas extras.',
+            type: 'warning',
+            browserTitle: 'Sesión Abierta',
+            browserMessage: 'Registra tu salida para evitar errores en horas extras'
+        },
+        {
+            title: '🚨 RECORDATORIO URGENTE',
+            message: '¡Aún tienes tu sesión de trabajo abierta!<br><br>Por favor registra tu salida inmediatamente para evitar problemas con tus horas extras.',
+            type: 'danger',
+            browserTitle: 'Urgente: Sesión Abierta',
+            browserMessage: 'Registra tu salida ahora'
+        },
+        {
+            title: '✅ Notificaciones Activadas',
+            message: 'Recibirás recordatorios para registrar tu salida',
+            type: 'success',
+            browserTitle: 'Notificaciones Listas',
+            browserMessage: 'Sistema de notificaciones activado'
+        }
+    ];
+    
+    // Seleccionar una notificación aleatoria
+    const randomNotification = notificationTypes[Math.floor(Math.random() * notificationTypes.length)];
+    
+    // Mostrar alerta personalizada
+    showCustomAlert(
+        randomNotification.title,
+        randomNotification.message,
+        randomNotification.type
+    );
+    
+    // Enviar notificación del navegador
+    sendBrowserNotification(
+        randomNotification.browserTitle,
+        randomNotification.browserMessage
+    );
+    
+    console.log('📱 Notificación emulada:', randomNotification.title);
 }
