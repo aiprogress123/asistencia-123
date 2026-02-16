@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  progress-app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - JWT_SECRET=progress-secret-key-2024-production
+      - PORT=3000
+    volumes:
+      - ./uploads:/app/uploads
+      - ./progress_net_assistance.database:/app/progress_net_assistance.database
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Opcional: PostgreSQL para producción
+  # postgres:
+  #   image: postgres:15-alpine
+  #   environment:
+  #     POSTGRES_DB: progress_assistance
+  #     POSTGRES_USER: progress
+  #     POSTGRES_PASSWORD: secure_password_2024
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   ports:
+  #     - "5432:5432"
+
+# volumes:
+#   postgres_data:

@@ -567,6 +567,17 @@ app.get('/api/ngrok-test', (req, res) => {
     });
 });
 
+// Endpoint de health check para Docker/Producción
+app.get('/api/health', (req, res) => {
+    res.json({ 
+        status: 'healthy',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        environment: process.env.NODE_ENV || 'development',
+        version: '2.0.0'
+    });
+});
+
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`Servidor de Progress corriendo en http://localhost:${PORT}`);
     console.log(`Acceso desde red local: http://192.168.20.51:${PORT}`);
