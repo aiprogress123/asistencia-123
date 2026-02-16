@@ -2,6 +2,20 @@ let currentUser = null;
 let currentLocation = null;
 let cameraStream = null;
 let photoData = null;
+let currentCamera = 'user'; // 'user' para frontal, 'environment' para trasera
+let availableCameras = [];
+
+// Definición temprana de loadAllAttendance para evitar ReferenceError
+function loadAllAttendance() {
+    console.log('🚀 loadAllAttendance() llamada - versión temprana');
+    // Esta función será redefinida más tarde con la implementación completa
+    if (typeof loadAllAttendanceImpl === 'function') {
+        return loadAllAttendanceImpl();
+    } else {
+        console.error('❌ Implementación de loadAllAttendance no disponible aún');
+        showCustomAlert('❌ Error', 'Recarga la página e intenta nuevamente', 'warning');
+    }
+}
 
 // Configuración de zona horaria para Colombia
 const TIMEZONE = 'America/Bogota';
@@ -42,6 +56,12 @@ function formatTimeColombia(date) {
 }
 
 const API_BASE = window.location.origin + '/api';
+
+// Función para validar email
+function validateEmail(email) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+}
 
 // Función para mostrar alertas personalizadas con estilo
 function showCustomAlert(title, message, type = 'info') {
@@ -230,6 +250,21 @@ document.addEventListener('DOMContentLoaded', function() {
         const user = JSON.parse(localStorage.getItem('progressUser'));
         loginSuccess(user, token);
     }
+    
+    // Detectar si está en modo PWA
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+        console.log('Aplicación ejecutándose en modo PWA');
+        document.body.classList.add('pwa-mode');
+    }
+    
+    // Detectar conexión a internet
+    window.addEventListener('online', () => {
+        showCustomAlert('🌐 Conexión Restablecida', 'Ahora estás conectado a internet', 'success');
+    });
+    
+    window.addEventListener('offline', () => {
+        showCustomAlert('📵 Sin Conexión', 'Trabajando en modo offline. Algunas funciones pueden no estar disponibles.', 'warning');
+    });
 });
 
 document.getElementById('loginForm').addEventListener('submit', async function(e) {
@@ -237,6 +272,23 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
     
     const email = document.getElementById('email').value;
     const password = document.getElementById('password').value;
+    
+    // Validaciones
+    if (!email || !password) {
+        showCustomAlert('❌ Error', 'Por favor completa todos los campos', 'danger');
+        return;
+    }
+    
+    if (!validateEmail(email)) {
+        showCustomAlert('❌ Error', 'Por favor ingresa un email válido', 'danger');
+        return;
+    }
+    
+    // Mostrar loading
+    const submitBtn = document.querySelector('#loginForm button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Iniciando Sesión...';
+    submitBtn.disabled = true;
     
     try {
         const response = await fetch(`${API_BASE}/login`, {
@@ -252,20 +304,33 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
         if (response.ok) {
             loginSuccess(data.user, data.token);
         } else {
-            alert(data.error || 'Error al iniciar sesión');
+            showCustomAlert('❌ Error', data.error || 'Credenciales incorrectas', 'danger');
         }
     } catch (error) {
-        alert('Error de conexión. Intente nuevamente.');
+        showCustomAlert('❌ Error', 'No se pudo conectar con el servidor', 'danger');
+    } finally {
+        // Restaurar botón
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
     }
 });
 
 function loginSuccess(user, token) {
+    console.log('🎉 Login exitoso, procesando usuario...');
+    console.log('👤 Datos del usuario:', user);
+    console.log('🔑 Token recibido:', token ? 'sí' : 'no');
+
+    
     currentUser = user;
     localStorage.setItem('progressToken', token);
     localStorage.setItem('progressUser', JSON.stringify(user));
     
+    console.log('💾 Datos guardados en localStorage');
+    
     document.getElementById('loginScreen').classList.add('hidden');
     document.getElementById('mainApp').classList.remove('hidden');
+    
+    console.log('🔄 Cambiando de vista: login → mainApp');
     
     // Determinar el rol y texto a mostrar
     let roleText = 'Empleado';
@@ -274,8 +339,10 @@ function loginSuccess(user, token) {
     } else if (user.role === 'coordinator') {
         roleText = 'Coordinador';
     } else if (user.role === 'ban') {
-        roleText = 'Ban';
+        roleText = 'Van';
     }
+    
+    console.log('🏷️ Rol detectado:', user.role, '-', roleText);
     
     document.getElementById('userInfo').innerHTML = `
         <div class="d-inline-block">
@@ -286,8 +353,11 @@ function loginSuccess(user, token) {
         </div>
     `;
     
+    console.log('🎨 UI de usuario actualizada');
+    
     // Admin y Coordinador ven el panel de administración
     if (user.role === 'admin' || user.role === 'coordinator') {
+        console.log('🛡️ Mostrando vista de administrador/coordinador');
         document.getElementById('employeeView').classList.add('hidden');
         document.getElementById('adminView').classList.remove('hidden');
         
@@ -296,17 +366,22 @@ function loginSuccess(user, token) {
         
         // Cargar datos según el rol
         if (user.role === 'admin') {
+            console.log('👥 Cargando empleados (admin)');
             loadEmployees(); // Admin puede ver y editar empleados
         } else {
+            console.log('📊 Cargando todos los registros (coordinador)');
             loadAllAttendance(); // Coordinador solo ve registros
         }
     } else {
+        console.log('👷 Mostrando vista de empleado');
         // Empleados y Ban ven su vista normal
         document.getElementById('employeeView').classList.remove('hidden');
         document.getElementById('adminView').classList.add('hidden');
         loadMyAttendance();
         getLocation();
     }
+    
+    console.log('✅ Proceso de login completado');
 }
 
 // Función para actualizar la interfaz según el rol
@@ -383,6 +458,9 @@ async function toggleCamera() {
             <i class="fas fa-camera fa-3x text-muted"></i>
             <p class="text-muted mt-2">Cámara no activada</p>
         `;
+        
+        // Ocultar botón de cambiar cámara
+        document.getElementById('switchCameraBtn').style.display = 'none';
     } else {
         try {
             // Solicitar permisos de cámara explícitamente
@@ -419,6 +497,9 @@ async function toggleCamera() {
             video.style.display = 'block';
             placeholder.style.display = 'none';
             video.play();
+            
+            // Mostrar botón de cambiar cámara si hay múltiples cámaras
+            checkAndShowSwitchCameraButton();
             
         } catch (error) {
             console.error('Error de cámara:', error);
@@ -462,8 +543,97 @@ function capturePhoto() {
     canvas.height = video.videoHeight;
     context.drawImage(video, 0, 0);
     
-    photoData = canvas.toDataURL('image/jpeg');
-    return photoData;
+    // Convertir a blob directamente
+    return new Promise((resolve) => {
+        canvas.toBlob((blob) => {
+            photoData = canvas.toDataURL('image/jpeg');
+            resolve(blob);
+        }, 'image/jpeg');
+    });
+}
+
+// Función para verificar y mostrar el botón de cambiar cámara
+async function checkAndShowSwitchCameraButton() {
+    try {
+        // Obtener lista de dispositivos de video
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoDevices = devices.filter(device => device.kind === 'videoinput');
+        
+        // Si hay más de una cámara, mostrar el botón
+        const switchBtn = document.getElementById('switchCameraBtn');
+        if (videoDevices.length > 1) {
+            switchBtn.style.display = 'inline-block';
+            availableCameras = videoDevices;
+            console.log(`Se encontraron ${videoDevices.length} cámaras disponibles`);
+        } else {
+            switchBtn.style.display = 'none';
+            console.log('Solo se encontró una cámara');
+        }
+    } catch (error) {
+        console.error('Error al verificar cámaras:', error);
+        document.getElementById('switchCameraBtn').style.display = 'none';
+    }
+}
+
+// Función para cambiar entre cámaras frontal y trasera
+async function switchCamera() {
+    if (!cameraStream) {
+        alert('Por favor, activa la cámara primero');
+        return;
+    }
+    
+    try {
+        // Detener stream actual
+        cameraStream.getTracks().forEach(track => track.stop());
+        
+        // Alternar entre cámaras
+        currentCamera = currentCamera === 'user' ? 'environment' : 'user';
+        
+        // Intentar obtener acceso a la nueva cámara
+        const constraints = { 
+            video: { 
+                facingMode: currentCamera,
+                width: { ideal: 1280 },
+                height: { ideal: 720 }
+            } 
+        };
+        
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        cameraStream = stream;
+        
+        const video = document.getElementById('video');
+        video.srcObject = cameraStream;
+        video.play();
+        
+        // Actualizar texto del botón
+        const switchBtn = document.getElementById('switchCameraBtn');
+        const cameraType = currentCamera === 'user' ? 'frontal' : 'trasera';
+        switchBtn.innerHTML = `<i class="fas fa-sync-alt me-1"></i>Cámara ${cameraType}`;
+        
+        // Mostrar mensaje de confirmación
+        const cameraIcon = currentCamera === 'user' ? '🤳' : '📷';
+        showCustomAlert('📸 Cámara Cambiada', `Se ha cambiado a la cámara ${cameraType} ${cameraIcon}`, 'info');
+        
+    } catch (error) {
+        console.error('Error al cambiar cámara:', error);
+        
+        // Revertir al modo anterior si falla
+        currentCamera = currentCamera === 'user' ? 'environment' : 'user';
+        
+        // Intentar recuperar la cámara anterior
+        try {
+            const fallbackConstraints = { video: { facingMode: currentCamera } };
+            const stream = await navigator.mediaDevices.getUserMedia(fallbackConstraints);
+            cameraStream = stream;
+            
+            const video = document.getElementById('video');
+            video.srcObject = cameraStream;
+            video.play();
+        } catch (fallbackError) {
+            console.error('Error al recuperar cámara:', fallbackError);
+            alert('No se pudo cambiar de cámara. Por favor, intenta nuevamente.');
+        }
+    }
 }
 
 function getLocation() {
@@ -600,56 +770,99 @@ function getLocation() {
 }
 
 async function recordAttendance(type) {
+    console.log('🚀 Iniciando registro de asistencia:', type);
+    console.log('📍 Ubicación actual:', currentLocation);
+    console.log('📷 Estado de cámara:', cameraStream ? 'activa' : 'inactiva');
+    
     if (!currentLocation) {
-        alert('Debe obtener la ubicación antes de registrar asistencia');
+        console.error('❌ Error: No hay ubicación');
+        showCustomAlert('📍 Ubicación Requerida', 'Debe obtener la ubicación antes de registrar asistencia', 'warning');
         return;
     }
     
     if (!cameraStream) {
-        alert('Debe activar la cámara antes de registrar asistencia');
+        console.error('❌ Error: No hay cámara activa');
+        showCustomAlert('📷 Cámara Requerida', 'Debe activar la cámara antes de registrar asistencia', 'warning');
         return;
     }
     
-    const photoBlob = await capturePhoto();
-    const formData = new FormData();
-    formData.append('type', type);
-    formData.append('latitude', currentLocation.latitude);
-    formData.append('longitude', currentLocation.longitude);
-    
-    fetch(photoData)
-        .then(res => res.blob())
-        .then(blob => {
-            formData.append('photo', blob, 'attendance.jpg');
-            
-            return fetch(`${API_BASE}/attendance`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('progressToken')}`
-                },
-                body: formData
-            });
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.error) {
-                alert(data.error);
-            } else {
-                const action = type === 'entry' ? 'entrada' : 'salida';
-                alert(`${action.charAt(0).toUpperCase() + action.slice(1)} registrada correctamente`);
-                
-                // Mostrar alerta específico para entradas
-                if (type === 'entry') {
-                    setTimeout(() => {
-                        showCustomAlert('⏰ RECORDATORIO', 'No olvides registrar tu salida al finalizar tu jornada.<br><br>Esto evitará errores en el cálculo de horas extras y mantendrá tus registros correctos.', 'info');
-                    }, 1000); // Esperar 1 segundo para mostrar el recordatorio
-                }
-                
-                loadMyAttendance();
-            }
-        })
-        .catch(error => {
-            alert('Error al registrar asistencia. Intente nuevamente.');
+    try {
+        console.log('📸 Capturando foto...');
+        const photoBlob = await capturePhoto();
+        console.log('📸 Foto capturada, tamaño:', photoBlob.size, 'bytes');
+        
+        const formData = new FormData();
+        formData.append('type', type);
+        formData.append('latitude', currentLocation.latitude);
+        formData.append('longitude', currentLocation.longitude);
+        formData.append('photo', photoBlob, 'attendance.jpg');
+        
+        console.log('🌐 Enviando petición a:', `${API_BASE}/attendance`);
+        
+        const token = localStorage.getItem('progressToken');
+        console.log('🔑 Token:', token ? 'existe' : 'no existe');
+        
+        const response = await fetch(`${API_BASE}/attendance`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            },
+            body: formData
         });
+        
+        console.log('📡 Respuesta del servidor:', response.status, response.statusText);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        console.log('✅ Datos recibidos:', data);
+        
+        if (data.error) {
+            console.error('❌ Error del servidor:', data.error);
+            showCustomAlert('❌ Error', data.error, 'danger');
+        } else {
+            const action = type === 'entry' ? 'entrada' : 'salida';
+            console.log('✅', action, 'registrada correctamente');
+            
+            showCustomAlert(
+                '✅ Registro Exitoso', 
+                `${action.charAt(0).toUpperCase() + action.slice(1)} registrada correctamente`, 
+                'success'
+            );
+            
+            // Mostrar alerta específico para entradas
+            if (type === 'entry') {
+                setTimeout(() => {
+                    showCustomAlert(
+                        '⏰ RECORDATORIO', 
+                        'No olvides registrar tu salida al finalizar tu jornada.<br><br>Esto evitará errores en el cálculo de horas extras y mantendrá tus registros correctos.', 
+                        'info'
+                    );
+                }, 1000);
+            }
+            
+            loadMyAttendance();
+        }
+    } catch (error) {
+        console.error('💥 Error completo:', error);
+        
+        let errorMessage = 'Error al registrar asistencia. Intente nuevamente.';
+        
+        if (error.message.includes('HTTP 401')) {
+            errorMessage = 'Sesión expirada. Por favor, inicie sesión nuevamente.';
+            setTimeout(() => logout(), 2000);
+        } else if (error.message.includes('HTTP 403')) {
+            errorMessage = 'No tiene permisos para registrar asistencia.';
+        } else if (error.message.includes('Failed to fetch')) {
+            errorMessage = 'Error de conexión. Verifique su conexión a internet.';
+        } else if (error.message.includes('NetworkError')) {
+            errorMessage = 'Error de red. Intente nuevamente.';
+        }
+        
+        showCustomAlert('❌ Error de Conexión', errorMessage, 'danger');
+    }
 }
 
 async function deleteAttendanceRecord(recordId) {
@@ -711,8 +924,8 @@ function displayAttendanceRecords(records) {
     }
 
     // Obtener el rol del usuario actual
-    const currentUser = JSON.parse(localStorage.getItem('progressUser'));
-    const userRole = currentUser ? currentUser.role : 'employee';
+    const currentUserAttendance = JSON.parse(localStorage.getItem('progressUser'));
+    const userRole = currentUserAttendance ? currentUserAttendance.role : 'employee';
 
     // Agrupar registros por día para mostrar resumen de horas
     const dailyRecords = {};
@@ -835,7 +1048,7 @@ function displayAttendanceRecords(records) {
                             ${dateStr}
                         </h6>
                         <div class="mb-2">
-                            ${day.overtimeHours > 0 ? `
+                            ${day.overtimeHours > 0 && !isNaN(day.overtimeHours) ? `
                                 <span class="badge bg-warning">
                                     <i class="fas fa-hourglass-half me-1"></i>
                                     Extras: ${day.overtimeHours.toFixed(1)}h
@@ -895,34 +1108,141 @@ function displayAttendanceRecords(records) {
 }
 
 async function loadEmployees() {
+    console.log('🔄 Cargando empleados...');
+    
+    // Mostrar estado de carga
+    const tbody = document.getElementById('employeesTableBody');
+    if (tbody) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center"><div class="spinner spinner-sm"></div> Cargando empleados...</td></tr>';
+    }
+    
     try {
+        const token = localStorage.getItem('progressToken');
+        console.log('🔑 Token:', token ? 'existe' : 'no existe');
+        
+        if (!token) {
+            throw new Error('No hay token de autenticación');
+        }
+        
         const response = await fetch(`${API_BASE}/admin/employees`, {
             headers: {
-                'Authorization': `Bearer ${localStorage.getItem('progressToken')}`
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
             }
         });
         
-        const employees = await response.json();
+        console.log('📡 Respuesta status:', response.status);
+        console.log('📡 Respuesta headers:', response.headers);
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('❌ Error del servidor (texto):', errorText);
+            
+            let errorData;
+            try {
+                errorData = JSON.parse(errorText);
+            } catch (e) {
+                errorData = { error: errorText };
+            }
+            
+            // Si es error de autorización, redirigir al login
+            if (response.status === 401 || response.status === 403) {
+                console.log('🔒 Error de autorización, redirigiendo al login...');
+                logout();
+                showCustomAlert('🔒 Sesión Expirada', 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.', 'warning');
+                return;
+            }
+            
+            throw new Error(errorData.error || `Error ${response.status}: ${response.statusText}`);
+        }
+        
+        const responseText = await response.text();
+        console.log('📄 Respuesta cruda:', responseText);
+        
+        let employees;
+        try {
+            employees = JSON.parse(responseText);
+        } catch (e) {
+            console.error('💥 Error al parsear JSON:', e);
+            console.error('📄 Texto recibido:', responseText);
+            throw new Error('La respuesta del servidor no es JSON válido');
+        }
+        
+        console.log('👥 Empleados recibidos:', employees);
+        console.log('📊 Cantidad de empleados:', employees.length);
+        
         displayEmployees(employees);
     } catch (error) {
-        document.getElementById('employeesTableBody').innerHTML = 
-            '<tr><td colspan="6" class="text-center text-danger">Error al cargar empleados</td></tr>';
+        console.error('💥 Error en loadEmployees:', error);
+        
+        let errorMessage = error.message;
+        if (error.name === 'TypeError' && error.message.includes('fetch')) {
+            errorMessage = 'Error de conexión. Verifica tu conexión a internet.';
+        } else if (error.name === 'SyntaxError') {
+            errorMessage = 'Error en el formato de respuesta del servidor.';
+        }
+        
+        const tbody = document.getElementById('employeesTableBody');
+        if (tbody) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" class="text-center">
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>Error al cargar empleados:</strong><br>
+                            ${errorMessage}
+                            <br><small class="text-muted">Intenta recargar la página</small>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }
+        
+        // Mostrar botón de reintentar
+        setTimeout(() => {
+            const retryBtn = document.createElement('button');
+            retryBtn.innerHTML = '<i class="fas fa-sync me-2"></i>Reintentar';
+            retryBtn.className = 'btn btn-primary mt-2';
+            retryBtn.onclick = loadEmployees;
+            
+            const tbody = document.getElementById('employeesTableBody');
+            if (tbody && tbody.querySelector('.alert-danger')) {
+                const alertDiv = tbody.querySelector('.alert-danger');
+                alertDiv.appendChild(document.createElement('br'));
+                alertDiv.appendChild(retryBtn);
+            }
+        }, 1000);
     }
 }
 
 function displayEmployees(employees) {
+    console.log('🎨 Mostrando empleados en la tabla:', employees.length);
+    console.log('📋 Lista completa:', employees.map(emp => ({
+        id: emp.id,
+        name: emp.name,
+        email: emp.email,
+        role: emp.role
+    })));
+    
     const tbody = document.getElementById('employeesTableBody');
     
     if (employees.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="text-center">No hay empleados registrados</td></tr>';
+        console.log('❌ No hay empleados para mostrar');
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center">No hay empleados registrados</td></tr>';
         return;
     }
     
     // Obtener el rol del usuario actual
     const currentUser = JSON.parse(localStorage.getItem('progressUser'));
+    const userRole = currentUser ? currentUser.role : 'employee';
     const isAdmin = currentUser && currentUser.role === 'admin';
     
+    console.log('👤 Usuario actual:', currentUser);
+    console.log('🛡️ Es admin:', isAdmin);
+    
     tbody.innerHTML = employees.map(emp => {
+        console.log('🔄 Procesando empleado:', emp.name, 'rol:', emp.role);
+        
         // Determinar el color y texto del rol
         let roleBadge = '';
         if (emp.role === 'admin') {
@@ -930,26 +1250,36 @@ function displayEmployees(employees) {
         } else if (emp.role === 'coordinator') {
             roleBadge = '<span class="badge bg-warning text-dark">Coordinador</span>';
         } else if (emp.role === 'ban') {
-            roleBadge = '<span class="badge bg-secondary">Ban</span>';
+            roleBadge = '<span class="badge bg-secondary">Van</span>';
         } else {
             roleBadge = '<span class="badge bg-primary">Empleado</span>';
         }
         
+        console.log('🏷️ Badge para', emp.name, ':', roleBadge);
+        
         // Botones de acción solo para administradores
         const actionButtons = isAdmin ? `
-            <button onclick="changeEmployeeRole(${emp.id}, '${emp.name}', '${emp.role}')" 
-                    class="btn btn-sm btn-outline-warning me-1" 
-                    title="Cambiar Rol">
-                <i class="fas fa-user-tag me-1"></i>Rol
-            </button>
-            <button onclick="deleteEmployee(${emp.id}, '${emp.name}')" 
-                    class="btn btn-sm btn-outline-danger" 
-                    title="Eliminar Empleado">
-                <i class="fas fa-trash me-1"></i>Eliminar
-            </button>
+            <div class="dropdown">
+                <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" title="Acciones">
+                    <i class="fas fa-cog"></i>
+                    <span class="btn-text">Acciones</span>
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="#" onclick="editEmployeeName(${emp.id}, '${emp.name}', '${emp.email}')">
+                        <i class="fas fa-edit text-info me-2"></i>Editar Nombre
+                    </a></li>
+                    <li><a class="dropdown-item" href="#" onclick="changeEmployeeRole(${emp.id}, '${emp.name}', '${emp.role}')">
+                        <i class="fas fa-user-tag text-warning me-2"></i>Cambiar Rol
+                    </a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item text-danger" href="#" onclick="deleteEmployee(${emp.id}, '${emp.name}')">
+                        <i class="fas fa-trash me-2"></i>Eliminar Empleado
+                    </a></li>
+                </ul>
+            </div>
         ` : '<span class="text-muted">Solo vista</span>';
         
-        return `
+        const rowHtml = `
             <tr>
                 <td><span class="text-black bg-white px-2 py-1 rounded">${emp.id}</span></td>
                 <td><span class="text-black bg-white px-2 py-1 rounded">${emp.name}</span></td>
@@ -960,7 +1290,203 @@ function displayEmployees(employees) {
                 <td>${actionButtons}</td>
             </tr>
         `;
+        
+        console.log('✅ Fila generada para:', emp.name);
+        return rowHtml;
     }).join('');
+    
+    console.log('✅ Tabla de empleados actualizada');
+}
+
+function editEmployeeName(employeeId, currentName, currentEmail) {
+    const currentUser = JSON.parse(localStorage.getItem('progressUser'));
+    
+    if (currentUser.role !== 'admin') {
+        showCustomAlert('❌ Error', 'Solo los administradores pueden editar nombres de empleados', 'danger');
+        return;
+    }
+    
+    // No permitir editar al propio admin
+    if (currentUser.id === employeeId) {
+        showCustomAlert('❌ Error', 'No puedes editar tu propio nombre', 'danger');
+        return;
+    }
+    
+    const modalHtml = `
+        <div class="modal fade" id="editNameModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="fas fa-edit me-2"></i>
+                            Editar Nombre de Empleado
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Empleado:</strong> ${currentName}<br>
+                            <strong>Email:</strong> ${currentEmail}
+                        </div>
+                        
+                        <form id="editNameForm">
+                            <div class="mb-3">
+                                <label for="newEmployeeName" class="form-label">
+                                    <i class="fas fa-user me-1"></i>
+                                    Nuevo Nombre Completo
+                                </label>
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="newEmployeeName" 
+                                       value="${currentName}"
+                                       required
+                                       minlength="3"
+                                       maxlength="100">
+                                <small class="text-muted">
+                                    Ingresa el nuevo nombre completo del empleado
+                                </small>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="editNameReason" class="form-label">
+                                    <i class="fas fa-comment me-1"></i>
+                                    Motivo del Cambio
+                                </label>
+                                <textarea class="form-control" 
+                                          id="editNameReason" 
+                                          rows="3" 
+                                          placeholder="Describe el motivo por el cual estás cambiando el nombre..."
+                                          required></textarea>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            <i class="fas fa-times me-2"></i>Cancelar
+                        </button>
+                        <button type="button" class="btn btn-info" onclick="updateEmployeeName(${employeeId}, '${currentName}')">
+                            <i class="fas fa-save me-2"></i>Actualizar Nombre
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Eliminar modal anterior si existe
+    const existingModal = document.getElementById('editNameModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    // Agregar nuevo modal al body
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    // Mostrar modal
+    const modal = new bootstrap.Modal(document.getElementById('editNameModal'));
+    modal.show();
+    
+    // Limpiar modal al cerrar
+    document.getElementById('editNameModal').addEventListener('hidden.bs.modal', function () {
+        this.remove();
+    });
+}
+
+// Función para actualizar el nombre del empleado
+async function updateEmployeeName(employeeId, currentName) {
+    const newName = document.getElementById('newEmployeeName').value.trim();
+    const reason = document.getElementById('editNameReason').value.trim();
+    
+    // Validaciones
+    if (!newName || !reason) {
+        showCustomAlert('❌ Error', 'Por favor completa todos los campos', 'danger');
+        return;
+    }
+    
+    if (newName.length < 3) {
+        showCustomAlert('❌ Error', 'El nombre debe tener al menos 3 caracteres', 'danger');
+        return;
+    }
+    
+    if (newName === currentName) {
+        showCustomAlert('❌ Error', 'El nuevo nombre es igual al actual', 'danger');
+        return;
+    }
+    
+    // Confirmación
+    if (!confirm(`⚠️ ¿Estás seguro de cambiar el nombre de "${currentName}" a "${newName}"?\n\nMotivo: ${reason}\n\nEsta acción actualizará el nombre en todos los registros anteriores.`)) {
+        return;
+    }
+    
+    // Obtener el usuario actual
+    const currentUser = JSON.parse(localStorage.getItem('progressUser'));
+    
+    // Mostrar loading
+    const updateButton = document.querySelector(`button[onclick="updateEmployeeName(${employeeId}, '${currentName}')"]`);
+    const originalText = updateButton.innerHTML;
+    updateButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Actualizando...';
+    updateButton.disabled = true;
+    
+    try {
+        console.log('🚀 Enviando solicitud de cambio de nombre:', {
+            url: `${API_BASE}/admin/employees/${employeeId}/name`,
+            body: {
+                name: newName,
+                reason: reason,
+                admin_name: currentUser.name
+            }
+        });
+        
+        const response = await fetch(`${API_BASE}/admin/employees/${employeeId}/name`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('progressToken')}`
+            },
+            body: JSON.stringify({
+                name: newName,
+                reason: reason,
+                admin_name: currentUser.name
+            })
+        });
+        
+        console.log('📡 Respuesta del servidor:', response.status, response.statusText);
+        
+        const data = await response.json();
+        console.log('📋 Datos recibidos:', data);
+        
+        if (response.ok) {
+            // Cerrar modal
+            bootstrap.Modal.getInstance(document.getElementById('editNameModal')).hide();
+            
+            // Mostrar éxito
+            showCustomAlert(
+                '✅ Nombre Actualizado', 
+                `El nombre ha sido cambiado de "${currentName}" a "${newName}".\n\nMotivo: ${reason}\n\nCambio realizado por: ${currentUser.name}`, 
+                'success'
+            );
+            
+            // Recargar lista de empleados
+            loadEmployees();
+            
+        } else {
+            console.error('❌ Error del servidor:', data);
+            showCustomAlert('❌ Error', data.error || 'Error al actualizar el nombre', 'danger');
+            
+            // Restaurar botón
+            updateButton.innerHTML = originalText;
+            updateButton.disabled = false;
+        }
+        
+    } catch (error) {
+        console.error('🚨 Error de conexión:', error);
+        showCustomAlert('❌ Error', 'Error de conexión. Intenta nuevamente', 'danger');
+        
+        // Restaurar botón
+        updateButton.innerHTML = originalText;
+        updateButton.disabled = false;
+    }
 }
 
 // Función para cambiar el rol de un empleado
@@ -993,7 +1519,7 @@ function changeEmployeeRole(employeeId, employeeName, currentRole) {
                                     <option value="">Selecciona un rol...</option>
                                     <option value="employee" ${currentRole === 'employee' ? 'selected' : ''}>Empleado</option>
                                     <option value="coordinator" ${currentRole === 'coordinator' ? 'selected' : ''}>Coordinador</option>
-                                    <option value="ban" ${currentRole === 'ban' ? 'selected' : ''}>Ban (Sin Turno Fijo)</option>
+                                    <option value="ban" ${currentRole === 'ban' ? 'selected' : ''}>Van (Sin Turno Fijo)</option>
                                     <option value="admin" ${currentRole === 'admin' ? 'selected' : ''}>Administrador</option>
                                 </select>
                             </div>
@@ -1067,355 +1593,582 @@ function getRoleText(role) {
     switch(role) {
         case 'admin': return 'Administrador';
         case 'coordinator': return 'Coordinador';
-        case 'ban': return 'Ban';
+        case 'ban': return 'Van (Sin Turno Fijo)';
         default: return 'Empleado';
     }
 }
 
-// Función para actualizar el rol del empleado
-async function updateEmployeeRole(employeeId, employeeName) {
-    const newRole = document.getElementById('newRole').value;
-    const roleReason = document.getElementById('roleReason').value;
-    
-    // Depuración
-    console.log('🔍 Depuración de cambio de rol:', {
-        employeeId,
-        employeeName,
-        newRole,
-        roleReason,
-        newRoleLength: newRole ? newRole.length : 0,
-        roleReasonLength: roleReason ? roleReason.length : 0
-    });
-    
-    // Validar campos
-    if (!newRole || newRole.trim() === '') {
-        showCustomAlert('❌ Error', 'Por favor selecciona un rol', 'danger');
-        return;
+// Función de diagnóstico para ngrok
+async function diagnoseNgrokConnection() {
+    if (!window.location.hostname.includes('ngrok')) {
+        console.log('🌐 No estamos en ngrok, omitiendo diagnóstico');
+        return true;
     }
     
-    if (!roleReason || roleReason.trim() === '') {
-        showCustomAlert('❌ Error', 'Por favor proporciona un motivo', 'danger');
-        return;
-    }
-    
-    // Confirmación si es cambio a admin
-    if (newRole === 'admin') {
-        if (!confirm(`⚠️ ¿Estás seguro de convertir a ${employeeName} en Administrador?\n\nEsto le dará control total sobre el sistema, incluyendo:\n• Crear y eliminar empleados\n• Ver todos los registros\n• Cambiar roles de otros usuarios\n• Registrar salidas administrativas\n\nEsta acción no se puede deshacer fácilmente.`)) {
-            return;
-        }
-    }
+    console.log('🔍 Iniciando diagnóstico de conexión ngrok...');
     
     try {
-        console.log('🚀 Enviando solicitud de cambio de rol:', {
-            url: `${API_BASE}/admin/employees/${employeeId}/role`,
-            body: {
-                role: newRole,
-                reason: roleReason
-            }
-        });
-        
-        const response = await fetch(`${API_BASE}/admin/employees/${employeeId}/role`, {
-            method: 'PUT',
+        // Probar endpoint de prueba
+        const testResponse = await fetch(`${API_BASE}/ngrok-test`, {
+            method: 'GET',
             headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('progressToken')}`
+                'ngrok-skip-browser-warning': 'true',
+                'X-Requested-With': 'XMLHttpRequest'
             },
-            body: JSON.stringify({
-                role: newRole,
-                reason: roleReason
-            })
+            mode: 'cors',
+            credentials: 'include'
         });
         
-        console.log('📡 Respuesta del servidor:', response.status, response.statusText);
+        console.log('📡 Respuesta del test endpoint:', testResponse.status);
         
-        const data = await response.json();
-        console.log('📋 Datos recibidos:', data);
-        
-        if (response.ok) {
-            // Cerrar modal
-            bootstrap.Modal.getInstance(document.getElementById('changeRoleModal')).hide();
-            
-            // Mostrar éxito
-            showCustomAlert(
-                '✅ Rol Actualizado', 
-                `El rol de ${employeeName} ha sido cambiado a ${getRoleText(newRole)}.\n\nMotivo: ${roleReason}\n\nCambio realizado por: ${JSON.parse(localStorage.getItem('progressUser')).name}`, 
-                'success'
-            );
-            
-            // Recargar lista de empleados
-            loadEmployees();
-            
+        if (testResponse.ok) {
+            const testData = await testResponse.json();
+            console.log('✅ Conexión ngrok exitosa:', testData);
+            return true;
         } else {
-            console.error('❌ Error del servidor:', data);
-            showCustomAlert('❌ Error', data.error || 'Error al cambiar el rol del empleado', 'danger');
+            console.error('❌ Error en test endpoint:', testResponse.statusText);
+            return false;
         }
     } catch (error) {
-        console.error('🚨 Error de conexión:', error);
-        showCustomAlert('❌ Error de Conexión', 'No se pudo cambiar el rol. Verifica tu conexión a internet.', 'danger');
+        console.error('❌ Error de diagnóstico ngrok:', error);
+        return false;
     }
 }
 
-async function loadAllAttendance() {
+// Función para cargar todos los registros de asistencia (admin) - v2026
+async function loadAllAttendanceImpl() {
+    console.log('🚀 loadAllAttendance() llamada - v2026');
     try {
-        // Cargar empleados primero para tener la información de roles
-        const employeesResponse = await fetch(`${API_BASE}/admin/employees`, {
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('progressToken')}`
-            }
-        });
+        console.log('📊 Cargando todos los registros de asistencia...');
         
-        if (employeesResponse.ok) {
-            allEmployees = await employeesResponse.json();
+        // Headers especiales para ngrok
+        const headers = {
+            'Authorization': `Bearer ${localStorage.getItem('progressToken')}`,
+            'Content-Type': 'application/json',
+            'ngrok-skip-browser-warning': 'true'
+        };
+        
+        // Si estamos en ngrok, agregar headers adicionales
+        if (window.location.hostname.includes('ngrok')) {
+            headers['X-Requested-With'] = 'XMLHttpRequest';
+            headers['Accept'] = 'application/json';
+            headers['Cache-Control'] = 'no-cache';
+            headers['Pragma'] = 'no-cache';
         }
+        
+        console.log('🌐 Detectando hostname:', window.location.hostname);
+        console.log('🔑 Headers enviados:', headers);
         
         const response = await fetch(`${API_BASE}/admin/attendance`, {
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('progressToken')}`
-            }
+            method: 'GET',
+            headers: headers,
+            mode: 'cors',
+            credentials: 'include'
         });
         
+        console.log('📡 Respuesta de /api/admin/attendance:', response.status);
+        console.log('📡 Headers de respuesta:', [...response.headers.entries()]);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const contentType = response.headers.get('content-type');
+        console.log('📡 Content-Type:', contentType);
+        
+        if (!contentType || !contentType.includes('application/json')) {
+            const text = await response.text();
+            console.error('❌ Respuesta no es JSON:', text.substring(0, 200));
+            throw new Error('La respuesta no es JSON');
+        }
+        
         const records = await response.json();
-        allAttendanceRecords = records; // Guardar para usar en detalles
-        displayAllAttendance(records);
+        console.log('📋 Registros cargados:', records.length);
+        
+        // Guardar registros globalmente
+        allAttendanceRecords = records;
+        
+        // Mostrar registros
+        displayAllAttendanceRecords(records);
+        
     } catch (error) {
-        document.getElementById('attendanceTableBody').innerHTML = 
-            '<tr><td colspan="7" class="text-center text-danger">Error al cargar registros</td></tr>';
+        console.error('❌ Error cargando todos los registros:', error);
+        const container = document.getElementById('attendanceTableBody');
+        if (container) {
+            // Si es un error de CORS o de ngrok, mostrar mensaje específico
+            const isNgrokError = error.message.includes('CORS') || 
+                                error.message.includes('NetworkError') || 
+                                error.message.includes('Failed to fetch');
+            
+            if (isNgrokError && window.location.hostname.includes('ngrok')) {
+                container.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="text-center">
+                            <div class="alert alert-warning m-2">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                <strong>Error de conexión con ngrok</strong><br>
+                                <small>Intenta recargar la página o verifica la conexión del túnel ngrok</small><br>
+                                <button onclick="loadAllAttendance()" class="btn btn-sm btn-warning mt-2">
+                                    <i class="fas fa-redo me-1"></i>Reintentar
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            } else {
+                container.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="text-center text-danger">
+                            <i class="fas fa-exclamation-circle me-2"></i>
+                            Error al cargar registros: ${error.message}
+                        </td>
+                    </tr>
+                `;
+            }
+        }
     }
 }
 
-function displayAllAttendance(records) {
-    const tbody = document.getElementById('attendanceTableBody');
+// Función para mostrar todos los registros de asistencia
+function displayAllAttendanceRecords(records) {
+    console.log('🎨 displayAllAttendanceRecords llamada con', records.length, 'registros');
     
-    if (records.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="text-center">No hay registros de asistencia</td></tr>';
+    const container = document.getElementById('attendanceTableBody');
+    
+    if (!container) {
+        console.error('❌ Contenedor attendanceTableBody no encontrado');
         return;
     }
-
-    // Agrupar registros por empleado y día
-    const employeeDays = {};
     
-    records.forEach(record => {
-        const date = new Date(record.timestamp);
-        const dateKey = date.toDateString();
-        const employeeKey = `${record.employee_name}-${dateKey}`;
+    console.log('📋 Container encontrado:', container);
+    
+    if (records.length === 0) {
+        console.log('📭 No hay registros, mostrando mensaje vacío');
+        container.innerHTML = '<tr><td colspan="5" class="text-center">No hay registros de asistencia</td></tr>';
+        // Llamar al resumen solo si el contenedor está visible
+        setTimeout(() => displayEmployeeSummary([]), 200);
+        return;
+    }
+    
+    console.log('📊 Procesando', records.length, 'registros...');
+    
+    // Generar HTML para tabla
+    let html = '';
+    
+    console.log('🔄 Iniciando bucle de procesamiento de registros...');
+    
+    // Ordenar registros por timestamp (más reciente primero)
+    const sortedRecords = records.sort((a, b) => 
+        new Date(b.timestamp) - new Date(a.timestamp)
+    );
+    
+    sortedRecords.forEach((record, index) => {
+        console.log(`📋 Procesando registro ${index + 1}:`, record.employee_name, record.type, 'a las', record.timestamp);
         
-        if (!employeeDays[employeeKey]) {
-            employeeDays[employeeKey] = {
-                employee_name: record.employee_name,
-                email: record.email,
-                position: record.position,
-                date: dateKey,
-                records: [],
-                totalMinutes: 0,
-                regularHours: 0,
-                overtimeHours: 0
-            };
+        const date = new Date(record.timestamp);
+        const dateStr = date.toLocaleDateString('es-CO');
+        const timeStr = date.toLocaleTimeString('es-CO', {
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        
+        const typeIcon = record.type === 'entry' ? '🟢' : '🔴';
+        const typeText = record.type === 'entry' ? 'Entrada' : 'Salida';
+        const typeClass = record.type === 'entry' ? 'success' : 'danger';
+        
+        // Crear miniatura de la foto
+        const photoThumbnail = record.photo_path 
+            ? `<img src="/uploads/${record.photo_path}" 
+                   alt="Foto del registro" 
+                   class="img-thumbnail" 
+                   style="width: 40px; height: 40px; object-fit: cover; cursor: pointer; border: 1px solid var(--progress-teal);"
+                   onclick="showRecordDetails(${JSON.stringify(record).replace(/"/g, '&quot;')})"
+                   title="Click para ver detalles">`
+            : '<span class="text-muted">N/A</span>';
+        
+        const actionButtons = `<button class="btn btn-sm btn-primary" 
+                onclick="showRecordDetails(${JSON.stringify(record).replace(/"/g, '&quot;')})"
+                title="Ver detalles completos">
+                 <i class="fas fa-eye"></i> Detalles
+               </button>`;
+        
+        html += `
+            <tr>
+                <td><span class="text-black bg-white px-2 py-1 rounded" style="color: #000000 !important; font-weight: 500 !important;">${record.employee_name || 'N/A'}</span></td>
+                <td><span class="badge bg-${typeClass}">${typeIcon} ${typeText}</span></td>
+                <td><span class="text-black bg-white px-2 py-1 rounded" style="color: #000000 !important; font-weight: 500 !important;">${dateStr}<br><small style="color: #000000 !important; font-weight: 500 !important; font-size: inherit !important;">${timeStr}</small></span></td>
+                <td class="text-center">${photoThumbnail}</td>
+                <td><span class="text-black bg-white px-2 py-1 rounded" style="color: #000000 !important; font-weight: 500 !important;">${actionButtons}</span></td>
+            </tr>
+        `;
+    });
+    
+    console.log('🔄 Bucle finalizado, HTML generado:', html.length, 'caracteres');
+    console.log('🎨 Actualizando container...');
+    
+    container.innerHTML = html;
+    console.log('✅ Container actualizado con éxito');
+    
+    // Llamar al resumen con un pequeño retraso para asegurar que el DOM esté listo
+    setTimeout(() => displayEmployeeSummary(records), 200);
+}
+
+// Función para mostrar resumen de ingresos por empleado
+function displayEmployeeSummary(records) {
+    console.log('📊 Generando resumen de ingresos por empleado...');
+    
+    // Función de reinteto mejorada
+    function tryDisplaySummary(attempt = 1) {
+        const summaryContainer = document.getElementById('employeeSummary');
+        
+        // Verificar si la sección de asistencia está visible
+        const attendanceSection = document.getElementById('attendanceSection');
+        const isAttendanceSectionVisible = attendanceSection && !attendanceSection.classList.contains('hidden');
+        
+        if (!summaryContainer) {
+            console.error(`❌ Contenedor employeeSummary no encontrado (intento ${attempt})`);
+            if (attempt < 5) {
+                console.log(`🔄 Reintentando en ${attempt * 200}ms...`);
+                setTimeout(() => tryDisplaySummary(attempt + 1), attempt * 200);
+            } else {
+                console.error('❌ No se pudo encontrar el contenedor después de 5 intentos');
+            }
+            return;
         }
         
-        employeeDays[employeeKey].records.push(record);
-    });
-
-    // Calcular horas por día
-    Object.values(employeeDays).forEach(day => {
-        const sortedRecords = day.records.sort((a, b) => 
-            new Date(a.timestamp) - new Date(b.timestamp)
-        );
+        // Si la sección de asistencia no está visible, no mostrar el resumen
+        if (!isAttendanceSectionVisible) {
+            console.log('📋 La sección de asistencia no está visible, omitiendo resumen');
+            return;
+        }
         
-        let entryTime = null;
-        let totalMinutes = 0;
+        // Verificar si el contenedor está visible
+        if (summaryContainer.offsetParent === null) {
+            console.log(`📋 Contenedor employeeSummary no está visible (intento ${attempt})`);
+            if (attempt < 5) {
+                console.log(`🔄 Reintentando visibilidad en ${attempt * 200}ms...`);
+                setTimeout(() => tryDisplaySummary(attempt + 1), attempt * 200);
+            } else {
+                console.error('❌ Contenedor no visible después de 5 intentos');
+            }
+            return;
+        }
         
-        sortedRecords.forEach(record => {
-            const recordTime = new Date(record.timestamp);
+        console.log('✅ Contenedor employeeSummary encontrado y visible');
+        
+        if (records.length === 0) {
+            summaryContainer.innerHTML = `
+                <div class="col-12 text-center text-white">
+                    <i class="fas fa-info-circle fa-2x mb-2"></i>
+                    <p>No hay registros de asistencia para mostrar en el resumen</p>
+                </div>
+            `;
+            return;
+        }
+        
+        // Agrupar registros por empleado y calcular ingresos y horas extras
+        const employeeStats = {};
+        
+        records.forEach(record => {
+            const name = record.employee_name || 'Desconocido';
+            
+            if (!employeeStats[name]) {
+                employeeStats[name] = {
+                    name: name,
+                    totalEntries: 0,
+                    totalExits: 0,
+                    entries: [],
+                    exits: [],
+                    dailyOvertime: {},  // Horas extras por día
+                    totalOvertime: 0    // Total horas extras
+                };
+            }
             
             if (record.type === 'entry') {
-                entryTime = recordTime;
-            } else if (record.type === 'exit' && entryTime) {
-                const diffMinutes = Math.round((recordTime - entryTime) / (1000 * 60));
-                totalMinutes += diffMinutes;
-                entryTime = null;
+                employeeStats[name].totalEntries++;
+                employeeStats[name].entries.push(new Date(record.timestamp));
+            } else if (record.type === 'exit') {
+                employeeStats[name].totalExits++;
+                employeeStats[name].exits.push(new Date(record.timestamp));
             }
         });
         
-        // Si hay una entrada sin salida (trabajando actualmente)
-        if (entryTime) {
-            const now = new Date();
-            const diffMinutes = Math.round((now - entryTime) / (1000 * 60));
-            totalMinutes += diffMinutes;
-        }
+        // Calcular horas extras por empleado
+        Object.keys(employeeStats).forEach(empName => {
+            const stats = employeeStats[empName];
+            const dailyOvertime = {};
+            let totalOvertime = 0;
+            
+            // Agrupar entradas y salidas por día
+            const dailyRecords = {};
+            
+            // Procesar entradas
+            stats.entries.forEach(entry => {
+                const dateKey = entry.toLocaleDateString('es-CO');
+                if (!dailyRecords[dateKey]) {
+                    dailyRecords[dateKey] = { entries: [], exits: [] };
+                }
+                dailyRecords[dateKey].entries.push(entry);
+            });
+            
+            // Procesar salidas
+            stats.exits.forEach(exit => {
+                const dateKey = exit.toLocaleDateString('es-CO');
+                if (!dailyRecords[dateKey]) {
+                    dailyRecords[dateKey] = { entries: [], exits: [] };
+                }
+                dailyRecords[dateKey].exits.push(exit);
+            });
+            
+            // Calcular horas trabajadas por día
+            Object.keys(dailyRecords).forEach(dateKey => {
+                const dayRecords = dailyRecords[dateKey];
+                let dayHours = 0;
+                
+                // Emparejar entradas con salidas
+                const pairs = Math.min(dayRecords.entries.length, dayRecords.exits.length);
+                
+                for (let i = 0; i < pairs; i++) {
+                    const entry = dayRecords.entries[i];
+                    const exit = dayRecords.exits[i];
+                    
+                    if (entry && exit && exit > entry) {
+                        const hoursWorked = (exit - entry) / (1000 * 60 * 60); // Convertir a horas
+                        
+                        // Considerar máximo 12 horas trabajadas por día (para evitar errores)
+                        const validHours = Math.min(hoursWorked, 12);
+                        
+                        // Calcular horas extras (más de 9 horas es extra)
+                        const overtime = Math.max(0, validHours - 9);
+                        
+                        if (overtime > 0) {
+                            dayHours += overtime;
+                            dailyOvertime[dateKey] = overtime;
+                        }
+                    }
+                }
+                
+                totalOvertime += dayHours;
+            });
+            
+            stats.dailyOvertime = dailyOvertime;
+            stats.totalOvertime = totalOvertime;
+        });
         
-        day.totalMinutes = totalMinutes;
-        day.regularHours = Math.min(9, Math.floor(totalMinutes / 60));
-        day.overtimeHours = Math.max(0, totalMinutes / 60 - 9);
-        day.displayTime = `${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}m`;
-        day.colombiaTime = formatDateTimeColombia(new Date(day.records[0].timestamp));
-    });
-
-    // Agrupar por empleado para estadísticas
-    const employeeStats = {};
-    Object.values(employeeDays).forEach(day => {
-        if (!employeeStats[day.employee_name]) {
-            employeeStats[day.employee_name] = {
-                employee_name: day.employee_name,
-                email: day.email,
-                position: day.position,
-                days_worked: 0,
-                total_overtime: 0
-            };
-        }
-        employeeStats[day.employee_name].days_worked++;
-        employeeStats[day.employee_name].total_overtime += day.overtime_hours;
-    });
-
-    // Mostrar resumen por empleado
-    let summaryHtml = '<h5 class="text-white mb-3">Resumen por Empleado</h5>';
-    summaryHtml += '<div class="row mb-4">';
-
-    Object.values(employeeStats).forEach(emp => {
-        summaryHtml += `
-            <div class="col-md-6 mb-4">
-                <div class="card text-center" style="min-height: 200px;">
-                    <div class="card-body">
-                        <h6 class="card-title">
-                            <div class="mb-2">
-                                <span class="text-black bg-white px-2 py-1 rounded" style="font-size: 0.9rem;">${emp.employee_name}</span>
+        // Generar HTML para el resumen
+        let summaryHtml = '';
+        
+        Object.values(employeeStats).forEach(stats => {
+            const totalRecords = stats.totalEntries + stats.totalExits;
+            const percentage = totalRecords > 0 ? ((stats.totalEntries / totalRecords) * 100).toFixed(1) : 0;
+            
+            // Calcular horas extras quincenales (aproximadas)
+            const dailyOvertimeDays = Object.keys(stats.dailyOvertime).length;
+            const avgDailyOvertime = dailyOvertimeDays > 0 ? stats.totalOvertime / dailyOvertimeDays : 0;
+            const estimatedQuincenalOvertime = avgDailyOvertime * 15; // 15 días quincena
+            
+            summaryHtml += `
+                <div class="col-md-6 col-lg-4 mb-3">
+                    <div class="card h-100" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(0, 212, 255, 0.3);">
+                        <div class="card-body text-center">
+                            <h6 class="card-title text-white mb-3">
+                                <i class="fas fa-user me-2"></i>${stats.name}
+                            </h6>
+                            <div class="row text-center mb-3">
+                                <div class="col-4">
+                                    <div class="text-success">
+                                        <i class="fas fa-sign-in-alt fa-lg mb-1"></i>
+                                        <h6 class="mb-0">${stats.totalEntries}</h6>
+                                        <small>Entradas</small>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="text-danger">
+                                        <i class="fas fa-sign-out-alt fa-lg mb-1"></i>
+                                        <h6 class="mb-0">${stats.totalExits}</h6>
+                                        <small>Salidas</small>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="text-warning">
+                                        <i class="fas fa-clock fa-lg mb-1"></i>
+                                        <h6 class="mb-0">${stats.totalOvertime.toFixed(1)}</h6>
+                                        <small>Extras H</small>
+                                    </div>
+                                </div>
                             </div>
-                            <div>
-                                <small class="text-muted" style="font-size: 0.75rem;">Puesto:</small><br>
-                                <span class="text-black bg-white px-2 py-1 rounded" style="font-size: 0.8rem;">${emp.position || 'Jefe'}</span>
+                            <div class="row text-center">
+                                <div class="col-6">
+                                    <small class="text-white-50">Diarias:</small>
+                                    <div class="text-info fw-bold">${avgDailyOvertime.toFixed(1)}h</div>
+                                </div>
+                                <div class="col-6">
+                                    <small class="text-white-50">Quincenal:</small>
+                                    <div class="text-warning fw-bold">${estimatedQuincenalOvertime.toFixed(1)}h</div>
+                                </div>
                             </div>
-                        </h6>
-                        <div class="mt-3">
-                            <div class="mb-2">
-                                <small class="text-muted" style="font-size: 0.75rem;">Días Trabajados</small>
-                                <h5 class="text-success mb-0" style="font-size: 1.2rem;">${emp.days_worked}</h5>
-                            </div>
-                            <div>
-                                <small class="text-muted" style="font-size: 0.75rem;">Horas Extras</small>
-                                <h5 class="text-warning mb-0" style="font-size: 1.2rem;">${emp.total_overtime.toFixed(1)}h</h5>
+                            <div class="mt-3">
+                                <div class="progress" style="height: 8px; background: rgba(255, 255, 255, 0.2);">
+                                    <div class="progress-bar bg-success" style="width: ${percentage}%;"></div>
+                                </div>
+                                <small class="text-white">${percentage}% entradas</small>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        `;
-    });
-
-    summaryHtml += '</div>';
-
-    // Mostrar tabla de resumen
-    summaryHtml += `
-        <h4 class="text-white mb-3">Resumen de Horas Extras</h4>
-        <div class="table-responsive mb-4">
-            <table class="table admin-table">
-                <thead>
-                    <tr>
-                        <th>Empleado</th>
-                        <th>Días Trabajados</th>
-                        <th>Horas Extras</th>
-                    </tr>
-                </thead>
-                <tbody>
-    `;
-
-    Object.values(employeeStats).forEach(emp => {
-        summaryHtml += `
-            <tr>
-                <td>
-                    <div>
-                        <span class="text-black bg-white px-2 py-1 rounded">${emp.employee_name}</span><br>
-                        <small class="text-muted">${emp.position || 'N/A'}</small>
-                    </div>
-                </td>
-                <td><span class="text-black bg-white px-2 py-1 rounded">${emp.days_worked}</span></td>
-                <td><span class="text-black bg-white px-2 py-1 rounded">${emp.total_overtime.toFixed(1)}h</span></td>
-            </tr>
-        `;
-    });
-
-    summaryHtml += `
-                </tbody>
-            </table>
-        </div>
+            `;
+        });
         
-        <h4 class="text-white mb-3">Detalles por Día</h4>
-    `;
-
-    // Mostrar tabla de detalles diarios
-    tbody.innerHTML = summaryHtml + `
-        <table class="table admin-table">
-            <thead>
-                <tr>
-                    <th>Empleado</th>
-                    <th>Fecha</th>
-                    <th>Total</th>
-                    <th>Normales</th>
-                    <th>Extras</th>
-                    <th>Registros</th>
-                    <th>Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-    `;
-
-    const dailySummaries = Object.values(employeeDays).sort((a, b) => 
-        new Date(b.date) - new Date(a.date)
-    );
-
-    dailySummaries.forEach(day => {
-        const dateObj = new Date(day.date);
-        const dateStr = formatDateColombia(dateObj);
-        
-        tbody.innerHTML += `
-            <tr class="table-light">
-                <td>
-                    <div>
-                        <span class="text-black bg-white px-2 py-1 rounded">${day.employee_name}</span><br>
-                        <span class="text-black bg-white px-2 py-1 rounded">${day.position || 'N/A'}</span>
-                    </div>
-                </td>
-                <td><span class="text-black bg-white px-2 py-1 rounded">${dateStr}</span></td>
-                <td>
-                    <span class="badge bg-primary">
-                        <i class="fas fa-clock me-1"></i>${day.displayTime}
-                    </span>
-                </td>
-                <td>
-                    <span class="badge ${day.overtimeHours > 0 ? 'bg-warning' : 'bg-secondary'}">
-                        <i class="fas fa-hourglass-half me-1"></i>${day.overtimeHours.toFixed(1)}h
-                    </span>
-                </td>
-                <td>
-                    <small class="text-black bg-white px-2 py-1 rounded">${day.records.length} registros</small>
-                </td>
-                <td>
-                    <button onclick="showEmployeeDayDetails('${day.employee_name}', '${day.date}')" 
-                            class="btn btn-sm btn-outline-primary">
-                        <i class="fas fa-list me-1"></i>Ver Detalles
-                    </button>
-                </td>
-            </tr>
-        `;
-    });
-
-    tbody.innerHTML += `
-            </tbody>
-        </table>
-    `;
+        summaryContainer.innerHTML = summaryHtml;
+        console.log('✅ Resumen de ingresos actualizado');
+    }
+    
+    // Iniciar la espera del elemento
+    tryDisplaySummary();
 }
 
 function showEmployees() {
+    console.log('🔄 Mostrando sección de empleados');
     document.getElementById('employeesSection').classList.remove('hidden');
     document.getElementById('attendanceSection').classList.add('hidden');
     loadEmployees();
 }
 
 function showAllAttendance() {
-    document.getElementById('employeesSection').classList.add('hidden');
-    document.getElementById('attendanceSection').classList.remove('hidden');
-    loadAllAttendance();
+    console.log('🔄 showAllAttendance() llamada - v2026');
+    console.log('🔄 Mostrando sección de todos los registros');
+    console.log('🔍 Verificando elementos DOM...');
+    
+    // Verificar si loadAllAttendance está definida
+    if (typeof loadAllAttendance !== 'function') {
+        console.error('❌ loadAllAttendance no está definida. Intentando recargar...');
+        showCustomAlert('❌ Error', 'Función no disponible. Recarga la página.', 'danger');
+        return;
+    }
+    
+    const employeesSection = document.getElementById('employeesSection');
+    const attendanceSection = document.getElementById('attendanceSection');
+    
+    console.log('📋 employeesSection:', employeesSection ? 'encontrado' : 'NO ENCONTRADO');
+    console.log('📋 attendanceSection:', attendanceSection ? 'encontrado' : 'NO ENCONTRADO');
+    
+    if (!employeesSection || !attendanceSection) {
+        console.error('❌ Elementos DOM no encontrados');
+        showCustomAlert('❌ Error', 'No se encontraron los elementos necesarios', 'danger');
+        return;
+    }
+    
+    employeesSection.classList.add('hidden');
+    attendanceSection.classList.remove('hidden');
+    
+    console.log('🔄 Elementos actualizados, cargando registros directamente...');
+    
+    // Cargar registros directamente aquí para evitar ReferenceError
+    setTimeout(async () => {
+        try {
+            // Si estamos en ngrok, hacer diagnóstico primero
+            if (window.location.hostname.includes('ngrok')) {
+                console.log('🌐 Detectado ngrok, ejecutando diagnóstico...');
+                const isNgrokWorking = await diagnoseNgrokConnection();
+                
+                if (!isNgrokWorking) {
+                    throw new Error('La conexión con ngrok no está funcionando. Verifica que el túnel esté activo.');
+                }
+            }
+            
+            console.log('📊 Cargando todos los registros de asistencia...');
+            
+            // Headers especiales para ngrok
+            const headers = {
+                'Authorization': `Bearer ${localStorage.getItem('progressToken')}`,
+                'Content-Type': 'application/json',
+                'ngrok-skip-browser-warning': 'true'
+            };
+            
+            // Si estamos en ngrok, agregar headers adicionales
+            if (window.location.hostname.includes('ngrok')) {
+                headers['X-Requested-With'] = 'XMLHttpRequest';
+                headers['Accept'] = 'application/json';
+                headers['Cache-Control'] = 'no-cache';
+                headers['Pragma'] = 'no-cache';
+            }
+            
+            console.log('🌐 Detectando hostname:', window.location.hostname);
+            console.log('🔑 Headers enviados:', headers);
+            
+            const response = await fetch(`${API_BASE}/admin/attendance`, {
+                method: 'GET',
+                headers: headers,
+                mode: 'cors',
+                credentials: 'include'
+            });
+            
+            console.log('📡 Respuesta de /api/admin/attendance:', response.status);
+            console.log('📡 Headers de respuesta:', [...response.headers.entries()]);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const contentType = response.headers.get('content-type');
+            console.log('📡 Content-Type:', contentType);
+            
+            if (!contentType || !contentType.includes('application/json')) {
+                const text = await response.text();
+                console.error('❌ Respuesta no es JSON:', text.substring(0, 200));
+                throw new Error('La respuesta no es JSON');
+            }
+            
+            const records = await response.json();
+            console.log('📋 Registros cargados:', records.length);
+            
+            // Guardar registros globalmente
+            allAttendanceRecords = records;
+            
+            // Mostrar registros
+            displayAllAttendanceRecords(records);
+            
+        } catch (error) {
+            console.error('❌ Error cargando todos los registros:', error);
+            const container = document.getElementById('attendanceTableBody');
+            if (container) {
+                // Si es un error de CORS o de ngrok, mostrar mensaje específico
+                const isNgrokError = error.message.includes('CORS') || 
+                                    error.message.includes('NetworkError') || 
+                                    error.message.includes('Failed to fetch');
+                
+                if (isNgrokError && window.location.hostname.includes('ngrok')) {
+                    container.innerHTML = `
+                        <tr>
+                            <td colspan="5" class="text-center">
+                                <div class="alert alert-warning m-2">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    <strong>Error de conexión con ngrok</strong><br>
+                                    <small>Intenta recargar la página o verifica la conexión del túnel ngrok</small><br>
+                                    <button onclick="location.reload()" class="btn btn-sm btn-warning mt-2">
+                                        <i class="fas fa-redo me-1"></i>Reintentar
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                } else {
+                    container.innerHTML = `
+                        <tr>
+                            <td colspan="5" class="text-center text-danger">
+                                <i class="fas fa-exclamation-circle me-2"></i>
+                                Error al cargar registros: ${error.message}
+                            </td>
+                        </tr>
+                    `;
+                }
+            }
+        }
+    }, 100);
 }
 
 function showAddEmployee() {
+    console.log('🔄 Mostrando modal para agregar empleado');
     const modal = new bootstrap.Modal(document.getElementById('addEmployeeModal'));
     modal.show();
 }
@@ -1697,10 +2450,7 @@ function showAdminExitForm(employeeName, date) {
     // Agregar nuevo modal al body
     document.body.insertAdjacentHTML('beforeend', modalHtml);
     
-    // Cerrar modal de detalles actual
-    bootstrap.Modal.getInstance(document.getElementById('dayDetailsModal')).hide();
-    
-    // Mostrar modal de salida administrativa
+    // Mostrar modal
     const modal = new bootstrap.Modal(document.getElementById('adminExitModal'));
     modal.show();
     
@@ -2183,10 +2933,10 @@ async function showLocationOnMap(latitude, longitude, employeeName) {
 }
 
 async function addEmployee() {
-    const name = document.getElementById('empName').value;
-    const email = document.getElementById('empEmail').value;
-    const password = document.getElementById('empPassword').value;
-    const position = document.getElementById('empPosition').value;
+    const name = document.getElementById('employeeName').value;
+    const email = document.getElementById('employeeEmail').value;
+    const password = document.getElementById('employeePassword').value;
+    const position = document.getElementById('employeePosition').value;
     
     if (!name || !email || !password) {
         alert('Por favor complete todos los campos obligatorios');
@@ -2659,69 +3409,7 @@ document.addEventListener('DOMContentLoaded', function() {
             requestNotificationPermission();
         }, 2000);
     }
-    
-    // Agregar botón de prueba de notificaciones (solo para desarrollo)
-    setTimeout(() => {
-        addTestNotificationButton();
-    }, 3000);
 });
-
-// Función para agregar botón de prueba de notificaciones
-function addTestNotificationButton() {
-    // Verificar si el usuario está logueado
-    const token = localStorage.getItem('progressToken');
-    if (!token) {
-        console.log('❌ Usuario no logueado, no se agrega botón de prueba');
-        return;
-    }
-    
-    // Eliminar botón existente si hay uno
-    const existingButton = document.getElementById('testNotificationButton');
-    if (existingButton) {
-        existingButton.remove();
-    }
-    
-    // Eliminar botón de prueba de salida administrativa si existe
-    const existingAdminButton = document.getElementById('adminTestButton');
-    if (existingAdminButton) {
-        existingAdminButton.remove();
-    }
-    
-    // Crear botón de prueba más visible
-    const testButton = document.createElement('button');
-    testButton.id = 'testNotificationButton';
-    testButton.innerHTML = '<i class="fas fa-bell me-2"></i>🔔 PROBAR ALARMA';
-    testButton.className = 'btn btn-danger btn-lg position-fixed';
-    testButton.style.cssText = `
-        top: 20px;
-        right: 20px;
-        z-index: 9999;
-        box-shadow: 0 6px 20px rgba(255, 0, 0, 0.5);
-        border: 3px solid #ffffff;
-        font-weight: bold;
-        font-size: 1.1rem;
-        padding: 12px 20px;
-        border-radius: 10px;
-        animation: buttonPulse 2s ease-in-out infinite;
-        background: linear-gradient(45deg, #ff0000, #cc0000);
-        color: white;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-    `;
-    
-    // Agregar evento de clic
-    testButton.onclick = function() {
-        console.log('🚀 Botón de prueba presionado');
-        emulateNotification();
-    };
-    
-    // Agregar al body
-    document.body.appendChild(testButton);
-    
-    console.log('🔔 Botón de prueba de notificaciones agregado exitosamente');
-    console.log('📍 Botón ID:', testButton.id);
-    console.log('🎨 Estilos aplicados:', testButton.style.cssText);
-}
 
 // Función para emular notificación
 function emulateNotification() {
@@ -2771,22 +3459,451 @@ function emulateNotification() {
     console.log('📱 Notificación emulada:', randomNotification.title);
 }
 
-// Función para mostrar la sección de empleados
-function showEmployees() {
-    // Ocultar todas las secciones
-    document.getElementById('employeesSection').classList.remove('hidden');
-    document.getElementById('attendanceSection').classList.add('hidden');
+// Función para mostrar el modal de cambiar contraseña
+function showChangePassword() {
+    const modal = new bootstrap.Modal(document.getElementById('changePasswordModal'));
+    modal.show();
     
-    // Cargar empleados si no se han cargado
-    loadEmployees();
+    // Limpiar formulario
+    document.getElementById('changePasswordForm').reset();
 }
 
-// Función para mostrar la sección de todos los registros
-function showAllAttendance() {
-    // Ocultar todas las secciones
-    document.getElementById('employeesSection').classList.add('hidden');
-    document.getElementById('attendanceSection').classList.remove('hidden');
+// Función para mostrar el modal de olvidé contraseña
+function showForgotPassword() {
+    const modal = new bootstrap.Modal(document.getElementById('forgotPasswordModal'));
+    modal.show();
     
-    // Cargar todos los registros
-    loadAllAttendance();
+    // Limpiar formulario
+    document.getElementById('forgotPasswordForm').reset();
 }
+
+// Función para cambiar contraseña
+async function changePassword() {
+    const currentPassword = document.getElementById('currentPassword').value;
+    const newPassword = document.getElementById('newPassword').value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
+    const securityQuestion = document.getElementById('securityQuestion').value;
+    const securityAnswer = document.getElementById('securityAnswer').value;
+    
+    console.log('Datos del formulario:', {
+        currentPassword: currentPassword ? '***' : undefined,
+        newPassword: newPassword ? '***' : undefined,
+        confirmPassword: confirmPassword ? '***' : undefined,
+        securityQuestion,
+        securityAnswer
+    });
+    
+    // Validaciones
+    if (!currentPassword || !newPassword || !confirmPassword || !securityQuestion || !securityAnswer) {
+        console.log('Error: Campos faltantes');
+        showCustomAlert('Error', 'Por favor completa todos los campos', 'danger');
+        return;
+    }
+    
+    if (newPassword !== confirmPassword) {
+        console.log('Error: Contraseñas no coinciden');
+        showCustomAlert('Error', 'Las contraseñas nuevas no coinciden', 'danger');
+        return;
+    }
+    
+    if (newPassword.length < 6) {
+        console.log('Error: Contraseña muy corta');
+        showCustomAlert('Error', 'La nueva contraseña debe tener al menos 6 caracteres', 'danger');
+        return;
+    }
+    
+    try {
+        console.log('Enviando solicitud de cambio de contraseña...');
+        const response = await fetch(`${API_BASE}/change-password`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('progressToken')}`
+            },
+            body: JSON.stringify({
+                currentPassword,
+                newPassword,
+                securityQuestion,
+                securityAnswer
+            })
+        });
+        
+        console.log('Respuesta del servidor:', response.status, response.statusText);
+        
+        const data = await response.json();
+        console.log('Datos recibidos:', data);
+        
+        if (response.ok) {
+            showCustomAlert('Éxito', 'Contraseña cambiada exitosamente', 'success');
+            
+            // Cerrar modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('changePasswordModal'));
+            modal.hide();
+            
+            // Limpiar formulario
+            document.getElementById('changePasswordForm').reset();
+        } else {
+            console.log('Error en respuesta:', data.error);
+            showCustomAlert('Error', data.error || 'Error al cambiar la contraseña', 'danger');
+        }
+    } catch (error) {
+        console.error('Error cambiando contraseña:', error);
+        showCustomAlert('Error', 'Error de conexión. Intenta nuevamente', 'danger');
+    }
+}
+
+// Función para recuperar contraseña
+async function resetPassword() {
+    const email = document.getElementById('forgotEmail').value;
+    const securityQuestion = document.getElementById('forgotSecurityQuestion').value;
+    const securityAnswer = document.getElementById('forgotSecurityAnswer').value;
+    const newPassword = document.getElementById('newPasswordReset').value;
+    const confirmPassword = document.getElementById('confirmPasswordReset').value;
+    
+    // Validaciones
+    if (!email || !securityQuestion || !securityAnswer || !newPassword || !confirmPassword) {
+        showCustomAlert('Error', 'Por favor completa todos los campos', 'danger');
+        return;
+    }
+    
+    if (newPassword !== confirmPassword) {
+        showCustomAlert('Error', 'Las contraseñas nuevas no coinciden', 'danger');
+        return;
+    }
+    
+    if (newPassword.length < 6) {
+        showCustomAlert('Error', 'La nueva contraseña debe tener al menos 6 caracteres', 'danger');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${API_BASE}/reset-password`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                email,
+                securityQuestion,
+                securityAnswer,
+                newPassword
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            showCustomAlert('Éxito', 'Contraseña restablecida exitosamente. Ahora puedes iniciar sesión', 'success');
+            
+            // Cerrar modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('forgotPasswordModal'));
+            modal.hide();
+            
+            // Limpiar formulario
+            document.getElementById('forgotPasswordForm').reset();
+        } else {
+            showCustomAlert('Error', data.error || 'Error al restablecer la contraseña', 'danger');
+        }
+    } catch (error) {
+        console.error('Error restableciendo contraseña:', error);
+        showCustomAlert('Error', 'Error de conexión. Intenta nuevamente', 'danger');
+    }
+}
+
+// Funciones para vista previa de Google Maps
+let mapPreviewTimeout;
+
+function showMapPreview(element, latitude, longitude) {
+    // Limpiar timeout existente
+    if (mapPreviewTimeout) {
+        clearTimeout(mapPreviewTimeout);
+    }
+    
+    // Esperar un momento antes de mostrar la vista previa
+    mapPreviewTimeout = setTimeout(() => {
+        createMapPreview(element, latitude, longitude);
+    }, 500);
+}
+
+function hideMapPreview(element) {
+    // Limpiar timeout
+    if (mapPreviewTimeout) {
+        clearTimeout(mapPreviewTimeout);
+    }
+    
+    // Eliminar vista previa existente
+    const existingPreview = document.getElementById('map-preview');
+    if (existingPreview) {
+        existingPreview.remove();
+    }
+}
+
+function createMapPreview(element, latitude, longitude) {
+    // Eliminar vista previa existente
+    const existingPreview = document.getElementById('map-preview');
+    if (existingPreview) {
+        existingPreview.remove();
+    }
+    
+    // Crear contenedor para la vista previa
+    const previewContainer = document.createElement('div');
+    previewContainer.id = 'map-preview';
+    previewContainer.style.cssText = `
+        position: absolute;
+        top: 100%;
+        left: 0;
+        z-index: 1000;
+        background: white;
+        border: 2px solid #00d4ff;
+        border-radius: 8px;
+        padding: 8px;
+        box-shadow: 0 4px 20px rgba(0, 212, 255, 0.3);
+        margin-top: 5px;
+        min-width: 300px;
+        max-width: 400px;
+    `;
+    
+    // Crear imagen del mapa estático
+    const mapImage = document.createElement('img');
+    mapImage.src = `https://maps.googleapis.com/maps/api/staticmap?center=${latitude},${longitude}&zoom=16&size=300x200&maptype=roadmap&markers=color:red%7C${latitude},${longitude}&key=AIzaSyB41DRUbKWJHPxaFjMAwdrzWzbVKartNGg`;
+    mapImage.alt = 'Vista previa del mapa';
+    mapImage.style.cssText = `
+        width: 100%;
+        height: 200px;
+        border-radius: 4px;
+        display: block;
+    `;
+    
+    // Crear información de coordenadas
+    const coordsInfo = document.createElement('div');
+    coordsInfo.innerHTML = `
+        <div style="font-size: 12px; color: #333; margin-top: 8px; text-align: center;">
+            <strong>Coordenadas:</strong><br>
+            Lat: ${latitude.toFixed(6)}, Lng: ${longitude.toFixed(6)}
+        </div>
+    `;
+    
+    // Agregar elementos al contenedor
+    previewContainer.appendChild(mapImage);
+    previewContainer.appendChild(coordsInfo);
+    
+    // Posicionar el contenedor relativo al elemento
+    const rect = element.getBoundingClientRect();
+    previewContainer.style.position = 'fixed';
+    previewContainer.style.top = (rect.bottom + window.scrollY + 5) + 'px';
+    previewContainer.style.left = (rect.left + window.scrollX) + 'px';
+    
+    // Agregar al body
+    document.body.appendChild(previewContainer);
+    
+    // Cerrar automáticamente después de 10 segundos
+    setTimeout(() => {
+        if (document.getElementById('map-preview')) {
+            document.getElementById('map-preview').remove();
+        }
+    }, 10000);
+}
+
+// Función para mostrar detalles completos de un registro
+function showRecordDetails(record) {
+    console.log('📋 Mostrando detalles del registro:', record);
+    
+    // Eliminar modal existente si hay uno
+    const existingModal = document.getElementById('recordDetailsModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    // Crear HTML del modal
+    const modalHtml = `
+        <div class="modal fade" id="recordDetailsModal" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content" style="background: rgba(30, 41, 59, 0.98); border: 2px solid var(--progress-teal);">
+                    <div class="modal-header" style="background: linear-gradient(45deg, var(--progress-teal), var(--progress-blue)); border: none;">
+                        <h5 class="modal-title text-white">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Detalles del Registro de Asistencia
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row">
+                            <!-- Información básica -->
+                            <div class="col-md-6">
+                                <h6 class="text-white mb-3">
+                                    <i class="fas fa-user me-2"></i>Información del Empleado
+                                </h6>
+                                <div class="mb-3">
+                                    <label class="text-white-50 small">Nombre:</label>
+                                    <div class="text-white fw-bold">${record.employee_name || 'N/A'}</div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="text-white-50 small">Tipo:</label>
+                                    <div>
+                                        <span class="badge bg-${record.type === 'entry' ? 'success' : 'danger'}">
+                                            ${record.type === 'entry' ? '🟢 Entrada' : '🔴 Salida'}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="text-white-50 small">Fecha y Hora:</label>
+                                    <div class="text-white">
+                                        ${new Date(record.timestamp).toLocaleDateString('es-CO')}<br>
+                                        <small class="text-white-50">
+                                            ${new Date(record.timestamp).toLocaleTimeString('es-CO')}
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Foto -->
+                            <div class="col-md-6">
+                                <h6 class="text-white mb-3">
+                                    <i class="fas fa-camera me-2"></i>Foto del Registro
+                                </h6>
+                                ${record.photo_path ? `
+                                    <div class="text-center">
+                                        <img src="/uploads/${record.photo_path}" 
+                                             alt="Foto del registro" 
+                                             class="img-fluid rounded"
+                                             style="max-height: 200px; border: 2px solid var(--progress-teal);">
+                                        <div class="mt-2">
+                                            <a href="/uploads/${record.photo_path}" 
+                                               target="_blank" 
+                                               class="btn btn-sm btn-outline-light">
+                                                <i class="fas fa-expand me-1"></i> Ver en tamaño completo
+                                            </a>
+                                        </div>
+                                    </div>
+                                ` : `
+                                    <div class="text-center text-white-50">
+                                        <i class="fas fa-camera fa-3x mb-2"></i>
+                                        <p>No hay foto disponible</p>
+                                    </div>
+                                `}
+                            </div>
+                        </div>
+                        
+                        <!-- Mapa -->
+                        ${record.latitude && record.longitude ? `
+                            <div class="row mt-4">
+                                <div class="col-12">
+                                    <h6 class="text-white mb-3">
+                                        <i class="fas fa-map-marker-alt me-2"></i>Ubicación
+                                    </h6>
+                                    <div class="row">
+                                        <div class="col-md-8">
+                                            <div class="map-container rounded" style="border: 2px solid var(--progress-teal); overflow: hidden;">
+                                                <div id="record-map-${record.id || Date.now()}" style="width: 100%; height: 250px; background: #f0f0f0; display: flex; align-items: center; justify-content: center;">
+                                                    <div class="text-center">
+                                                        <i class="fas fa-map-marker-alt fa-3x text-muted mb-2"></i>
+                                                        <p class="text-muted">Cargando mapa...</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="text-white">
+                                                <label class="text-white-50 small">Coordenadas:</label>
+                                                <div class="fw-bold">
+                                                    Lat: ${record.latitude.toFixed(6)}<br>
+                                                    Lng: ${record.longitude.toFixed(6)}
+                                                </div>
+                                                <div class="mt-3">
+                                                    <a href="https://www.google.com/maps?q=${record.latitude},${record.longitude}" 
+                                                       target="_blank" 
+                                                       class="btn btn-sm btn-outline-info w-100">
+                                                        <i class="fas fa-external-link-alt me-1"></i> Ver en Google Maps
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ` : ''}
+                        
+                        <!-- Información adicional -->
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <h6 class="text-white mb-3">
+                                    <i class="fas fa-info-circle me-2"></i>Información Adicional
+                                </h6>
+                                <div class="row text-white">
+                                    <div class="col-md-4">
+                                        <small class="text-white-50">ID del Registro:</small>
+                                        <div class="fw-bold">${record.id || 'N/A'}</div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <small class="text-white-50">ID del Empleado:</small>
+                                        <div class="fw-bold">${record.employee_id || 'N/A'}</div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <small class="text-white-50">Dispositivo:</small>
+                                        <div class="fw-bold">${record.device_info || 'Web'}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer" style="background: rgba(0, 0, 0, 0.3); border-top: 1px solid var(--progress-teal);">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            <i class="fas fa-times me-1"></i> Cerrar
+                        </button>
+                        ${record.latitude && record.longitude ? `
+                            <a href="https://www.google.com/maps?q=${record.latitude},${record.longitude}" 
+                               target="_blank" 
+                               class="btn btn-info">
+                                <i class="fas fa-map me-1"></i> Abrir en Google Maps
+                            </a>
+                        ` : ''}
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Agregar el modal al body
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    // Mostrar el modal
+    const modal = new bootstrap.Modal(document.getElementById('recordDetailsModal'));
+    modal.show();
+    
+    // Cargar el mapa si hay coordenadas
+    if (record.latitude && record.longitude) {
+        setTimeout(() => {
+            loadOpenStreetMap(record.latitude, record.longitude, record.id || Date.now());
+        }, 500);
+    }
+    
+    // Limpiar el modal cuando se cierre
+    document.getElementById('recordDetailsModal').addEventListener('hidden.bs.modal', function () {
+        this.remove();
+    });
+}
+
+// Función para cargar mapa con OpenStreetMap (no requiere API key)
+function loadOpenStreetMap(latitude, longitude, recordId) {
+    const mapContainer = document.getElementById(`record-map-${recordId}`);
+    if (!mapContainer) return;
+    
+    // Crear iframe con OpenStreetMap
+    const iframe = document.createElement('iframe');
+    iframe.style.width = '100%';
+    iframe.style.height = '250px';
+    iframe.style.border = 'none';
+    iframe.style.borderRadius = '4px';
+    iframe.src = `https://www.openstreetmap.org/export/embed.html?bbox=${longitude - 0.002},${latitude - 0.002},${longitude + 0.002},${latitude + 0.002}&layer=mapnik&marker=${latitude},${longitude}`;
+    
+    // Reemplazar el contenido del contenedor
+    mapContainer.innerHTML = '';
+    mapContainer.appendChild(iframe);
+    
+    console.log(`🗺️ Mapa cargado para coordenadas: ${latitude}, ${longitude}`);
+}
+
+// Asegurar que loadAllAttendance esté disponible globalmente
+window.loadAllAttendance = loadAllAttendance;
+window.loadAllAttendanceImpl = loadAllAttendanceImpl;
+console.log('✅ loadAllAttendance y loadAllAttendanceImpl registradas globalmente');

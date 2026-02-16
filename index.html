@@ -299,34 +299,75 @@
         }
 
         .admin-table {
-            background: rgba(30, 41, 59, 0.95);
-            backdrop-filter: blur(10px);
-            border: 1px solid var(--progress-teal);
+            background: rgba(255, 255, 255, 0.95);
             border-radius: 15px;
             overflow: hidden;
-            box-shadow: 0 10px 30px rgba(0, 212, 255, 0.2);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(0, 212, 255, 0.3);
         }
 
         .admin-table th {
-            background: linear-gradient(45deg, var(--progress-teal), var(--progress-blue));
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: var(--progress-white);
             border: none;
-            padding: 1rem;
-            font-weight: 600;
+            padding: 1.2rem 1rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 1px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
         }
 
         .admin-table td {
-            color: var(--progress-white);
+            color: #000 !important;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
             border-color: rgba(0, 212, 255, 0.2);
             font-weight: 500;
+            padding: 1rem;
+            vertical-align: middle;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .admin-table td small {
+            color: #000 !important;
+            font-weight: 600;
+        }
+        
+        .admin-table td strong {
+            color: #000 !important;
+            font-weight: 700;
+        }
+
+        .admin-table tbody tr {
+            transition: all 0.3s ease;
+            border-bottom: 1px solid rgba(0, 212, 255, 0.1);
         }
 
         .admin-table tbody tr:hover {
-            background: rgba(0, 212, 255, 0.15);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .admin-table tbody tr:hover td {
+            color: #fff !important;
+            background: transparent;
+        }
+        
+        .admin-table tbody tr:hover td small {
+            color: rgba(255, 255, 255, 0.9) !important;
+        }
+        
+        .admin-table tbody tr:hover td strong {
+            color: #fff !important;
         }
 
         .text-muted {
-            color: rgba(255, 255, 255, 0.9) !important;
+            color: #666 !important;
             font-weight: 400;
             text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
         }
@@ -763,6 +804,23 @@
 
                 <!-- All Attendance Section -->
                 <div id="attendanceSection" class="hidden">
+                    <!-- Resumen de Ingresos por Empleado -->
+                    <div class="card mb-4" style="background: rgba(30, 41, 59, 0.95); border: 1px solid var(--progress-teal);">
+                        <div class="card-header" style="background: linear-gradient(45deg, var(--progress-teal), var(--progress-blue)); border: none;">
+                            <h5 class="mb-0 text-white">
+                                <i class="fas fa-chart-bar me-2"></i>Resumen de Ingresos por Empleado
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="employeeSummary" class="row">
+                                <div class="col-12 text-center text-white">
+                                    <div class="spinner spinner-sm"></div>
+                                    <p class="mt-2">Calculando resumen...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <div class="admin-table">
                         <table class="table table-hover mb-0">
                             <thead>

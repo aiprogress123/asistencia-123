@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prueba de Registros</title>
+    <script src="app.js?v=2026"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .test-btn {
+            background: #007bff;
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px;
+            font-size: 16px;
+        }
+        .test-btn:hover {
+            background: #0056b3;
+        }
+        .result {
+            background: white;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+        }
+        .console {
+            background: #000;
+            color: #00ff00;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Prueba de Registros de Asistencia</h1>
+    
+    <div>
+        <button class="test-btn" onclick="testLoadAllAttendance()">
+            🧪 Probar Carga de Todos los Registros
+        </button>
+        
+        <button class="test-btn" onclick="testDisplayAllAttendance()">
+            🎨 Probar Mostrar Registros
+        </button>
+        
+        <button class="test-btn" onclick="clearConsole()">
+            🗑️ Limpiar Consola
+        </button>
+    </div>
+    
+    <div id="result" class="result"></div>
+    
+    <div id="console" class="console"></div>
+    
+    <script>
+        function testLoadAllAttendance() {
+            console.log('🧪 Iniciando prueba de loadAllAttendance...');
+            
+            if (typeof loadAllAttendance === 'function') {
+                console.log('✅ loadAllAttendance existe, llamando...');
+                loadAllAttendance();
+            } else {
+                console.log('❌ loadAllAttendance NO existe');
+                document.getElementById('result').innerHTML = 
+                    '<p style="color: red;">❌ ERROR: loadAllAttendance no está definida</p>';
+            }
+        }
+        
+        function testDisplayAllAttendance() {
+            console.log('🎨 Iniciando prueba de displayAllAttendance...');
+            
+            if (typeof displayAllAttendanceRecords === 'function') {
+                console.log('✅ displayAllAttendanceRecords existe');
+                
+                // Datos de prueba
+                const testRecords = [
+                    {
+                        id: 1,
+                        employee_name: 'Test Employee 1',
+                        type: 'entry',
+                        timestamp: '2026-02-13T08:00:00.000Z'
+                    },
+                    {
+                        id: 2,
+                        employee_name: 'Test Employee 1',
+                        type: 'exit',
+                        timestamp: '2026-02-13T17:00:00.000Z'
+                    }
+                ];
+                
+                displayAllAttendanceRecords(testRecords);
+                document.getElementById('result').innerHTML = 
+                    '<p style="color: green;">✅ displayAllAttendanceRecords ejecutada con 2 registros de prueba</p>';
+            } else {
+                console.log('❌ displayAllAttendanceRecords NO existe');
+                document.getElementById('result').innerHTML = 
+                    '<p style="color: red;">❌ ERROR: displayAllAttendanceRecords no está definida</p>';
+            }
+        }
+        
+        function clearConsole() {
+            console.log('🗑️ Limpiando consola...');
+            document.getElementById('console').innerHTML = '';
+        }
+        
+        // Redirigir console.log a nuestro div
+        const originalLog = console.log;
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            
+            const logDiv = document.getElementById('console');
+            if (logDiv) {
+                const timestamp = new Date().toLocaleTimeString();
+                logDiv.innerHTML += `[${timestamp}] ${Array.from(args).join(' ')}` + '\n';
+                logDiv.scrollTop = logDiv.scrollHeight;
+            }
+        };
+    </script>
+</body>
+</html>

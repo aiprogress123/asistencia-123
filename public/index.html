@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>Progress - Sistema de Asistencia</title>
     <meta name="description" content="Sistema de control de asistencia con foto y ubicación">
     <meta name="theme-color" content="#2563eb">
@@ -13,9 +16,31 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     
+    <style>
+        .loading-text {
+            color: #0056b3 !important;
+            font-weight: bold;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0% { color: #0056b3; }
+            50% { color: #007bff; }
+            100% { color: #0056b3; }
+        }
+        
+        .fs-5 {
+            font-size: 1.25rem;
+        }
+    </style>
+    
     <!-- PWA -->
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icon-192.png">
+    <meta name="apple-mobile-web-app-title" content="Progress NET">
+    <meta name="application-name" content="Progress NET">
+    <meta name="msapplication-TileColor" content="#0a1628">
+    <meta name="msapplication-config" content="browserconfig.xml">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -570,6 +595,501 @@
             color: var(--progress-teal);
             font-weight: 600;
         }
+        
+        /* Estilos para PWA */
+        .pwa-mode {
+            padding-top: env(safe-area-inset-top);
+            padding-bottom: env(safe-area-inset-bottom);
+            padding-left: env(safe-area-inset-left);
+            padding-right: env(safe-area-inset-right);
+        }
+        
+        .pwa-mode .main-container {
+            padding-top: 1rem;
+        }
+        
+        /* Botón de instalación PWA */
+        .pwa-install-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+            animation: bounce 2s infinite;
+        }
+        
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% {
+                transform: translateY(0);
+            }
+            40% {
+                transform: translateY(-10px);
+            }
+            60% {
+                transform: translateY(-5px);
+            }
+        }
+        
+        /* Indicador de conexión */
+        .connection-indicator {
+            position: fixed;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1001;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .connection-indicator.online {
+            background: var(--progress-green);
+            color: var(--progress-dark);
+        }
+        
+        .connection-indicator.offline {
+            background: var(--progress-gold);
+            color: var(--progress-dark);
+        }
+        
+        .connection-indicator.show {
+            opacity: 1;
+        }
+        
+        /* Mejoras para móviles */
+        @media (max-width: 768px) and (display-mode: standalone) {
+            .header-section {
+                padding-top: calc(1.5rem + env(safe-area-inset-top));
+            }
+            
+            .action-card {
+                margin-bottom: 1rem;
+            }
+            
+            .btn-action {
+                width: 100%;
+                margin: 0.25rem 0;
+            }
+            
+            .camera-preview {
+                max-width: 100%;
+                height: 250px;
+            }
+        }
+        
+        /* Estilos para botones responsivos en tablas */
+        @media (max-width: 768px) {
+            .responsive-btn {
+                padding: 0.25rem 0.5rem !important;
+                font-size: 0.75rem !important;
+                min-width: auto !important;
+                white-space: nowrap;
+            }
+            
+            .responsive-btn .btn-text {
+                display: none;
+            }
+            
+            .responsive-btn .fa-eye {
+                margin-right: 0 !important;
+            }
+            
+            /* Ajustar tabla para móviles */
+            .admin-table {
+                font-size: 0.8rem;
+            }
+            
+            .admin-table th,
+            .admin-table td {
+                padding: 0.5rem 0.25rem;
+                vertical-align: middle;
+            }
+            
+            /* Ocultar columnas menos importantes en móviles */
+            .admin-table th:nth-child(4),
+            .admin-table td:nth-child(4) {
+                display: none;
+            }
+            
+            /* Mejorar visibilidad de botones de administrador */
+            .btn-outline-info,
+            .btn-outline-warning,
+            .btn-outline-danger,
+            .btn-outline-primary {
+                padding: 0.3rem 0.5rem !important;
+                font-size: 0.7rem !important;
+                margin: 0.1rem !important;
+                min-width: 28px !important;
+                min-height: 28px !important;
+            }
+            
+            /* Botones principales del admin */
+            #addEmployeeBtn,
+            #adminExitBtn {
+                display: block !important;
+                width: 100% !important;
+                margin: 0.25rem 0 !important;
+                padding: 0.5rem !important;
+                font-size: 0.8rem !important;
+            }
+            
+            /* Ocultar botones de navegación en móvil */
+            @media (max-width: 768px) {
+                .d-none.d-md-block {
+                    display: none !important;
+                }
+                
+                /* Mejorar menú desplegable */
+                .dropdown-menu {
+                    font-size: 0.8rem !important;
+                    min-width: 200px !important;
+                }
+                
+                .dropdown-item {
+                    padding: 0.5rem 1rem !important;
+                    font-size: 0.8rem !important;
+                }
+                
+                .dropdown-item i {
+                    width: 20px !important;
+                    text-align: center !important;
+                }
+                
+                .btn-primary.dropdown-toggle {
+                    padding: 0.6rem 1rem !important;
+                    font-size: 0.9rem !important;
+                    font-weight: 500 !important;
+                }
+            }
+            
+            /* Botones de acción en tablas */
+            .btn-sm {
+                padding: 0.25rem 0.3rem !important;
+                font-size: 0.65rem !important;
+                line-height: 1.2 !important;
+            }
+            
+            /* Ocultar texto en botones pequeños */
+            .btn-sm .fa + span {
+                display: none !important;
+            }
+            
+            /* Botones de acción específicos del admin */
+            .admin-action-btn {
+                padding: 0.3rem 0.4rem !important;
+                margin: 0.1rem !important;
+                min-width: 28px !important;
+                min-height: 28px !important;
+                font-size: 0.7rem !important;
+            }
+            
+            .admin-action-btn .btn-text {
+                display: none !important;
+            }
+            
+            .admin-action-btn .fa {
+                margin-right: 0 !important;
+            }
+            
+            /* Mejoras de visibilidad para adminView */
+            #adminView {
+                color: var(--progress-white) !important;
+            }
+            
+            #adminView .btn {
+                color: var(--progress-white) !important;
+                font-weight: 500;
+                text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+            }
+            
+            #adminView .btn:hover {
+                color: var(--progress-white) !important;
+                filter: brightness(1.1);
+            }
+            
+            #adminView .dropdown-menu {
+                background: rgba(30, 41, 59, 0.95) !important;
+                border: 1px solid var(--progress-teal);
+            }
+            
+            #adminView .dropdown-item {
+                color: var(--progress-white) !important;
+                font-weight: 500;
+            }
+            
+            #adminView .dropdown-item:hover {
+                background: var(--progress-teal);
+                color: var(--progress-white) !important;
+            }
+            
+            #adminView .text-success {
+                color: var(--progress-green) !important;
+            }
+            
+            #adminView .text-warning {
+                color: var(--progress-gold) !important;
+            }
+            
+            #adminView h1, #adminView h2, #adminView h3, #adminView h4, #adminView h5, #adminView h6 {
+                color: var(--progress-white) !important;
+                text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            }
+            
+            #adminView .card {
+                background: rgba(30, 41, 59, 0.95) !important;
+                border: 1px solid var(--progress-teal);
+                color: var(--progress-white) !important;
+            }
+            
+            #adminView .table {
+                color: var(--progress-white) !important;
+            }
+            
+            #adminView .table th {
+                color: var(--progress-blue) !important;
+                font-weight: 600;
+                border-color: var(--progress-teal) !important;
+            }
+            
+            #adminView .table td {
+                border-color: rgba(0, 212, 255, 0.2) !important;
+            }
+            
+            /* Texto de fecha y hora en negro */
+            .table td .text-muted {
+                color: #000000 !important;
+                font-weight: 500;
+            }
+            
+            .table td {
+                color: #000000 !important;
+                font-weight: 500;
+            }
+            
+            /* Estilos para attendanceSection similares a employeesSection */
+            #attendanceSection .table td .text-muted {
+                color: #000000 !important;
+                font-weight: 500 !important;
+                font-size: inherit !important;
+                opacity: 1 !important;
+            }
+            
+            /* Forzar estilo en todos los spans dentro de la tabla */
+            #attendanceSection .table td span {
+                color: #000000 !important;
+                font-weight: 500 !important;
+            }
+            
+            #attendanceSection .table td span * {
+                color: #000000 !important;
+                font-weight: 500 !important;
+                font-size: inherit !important;
+            }
+            
+            #attendanceSection .table td {
+                color: #000000 !important;
+                font-weight: 500;
+            }
+            
+            #attendanceSection .table td strong {
+                color: #000000 !important;
+            }
+            
+            /* Mejoras de visibilidad para employeesSection */
+            #employeesSection {
+                color: var(--progress-white) !important;
+            }
+            
+            #employeesSection .btn {
+                color: var(--progress-white) !important;
+                font-weight: 500;
+                text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+            }
+            
+            #employeesSection .btn:hover {
+                color: var(--progress-white) !important;
+                filter: brightness(1.1);
+            }
+            
+            #employeesSection .dropdown-menu {
+                background: rgba(30, 41, 59, 0.95) !important;
+                border: 1px solid var(--progress-teal);
+            }
+            
+            #employeesSection .dropdown-item {
+                color: var(--progress-white) !important;
+                font-weight: 500;
+            }
+            
+            #employeesSection .dropdown-item:hover {
+                background: var(--progress-teal);
+                color: var(--progress-white) !important;
+            }
+            
+            #employeesSection .text-success {
+                color: var(--progress-green) !important;
+            }
+            
+            #employeesSection .text-warning {
+                color: var(--progress-gold) !important;
+            }
+            
+            #employeesSection h1, #employeesSection h2, #employeesSection h3, #employeesSection h4, #employeesSection h5, #employeesSection h6 {
+                color: var(--progress-white) !important;
+                text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            }
+            
+            #employeesSection .card {
+                background: rgba(30, 41, 59, 0.95) !important;
+                border: 1px solid var(--progress-teal);
+                color: var(--progress-white) !important;
+            }
+            
+            #employeesSection .table {
+                color: var(--progress-white) !important;
+            }
+            
+            #employeesSection .table th {
+                color: var(--progress-blue) !important;
+                font-weight: 600;
+                border-color: var(--progress-teal) !important;
+            }
+            
+            #employeesSection .table td {
+                border-color: rgba(0, 212, 255, 0.2) !important;
+                color: var(--progress-white) !important;
+                font-weight: 500;
+            }
+            
+            #employeesSection .table td .text-muted {
+                color: rgba(255, 255, 255, 0.7) !important;
+                font-weight: 400;
+            }
+            
+            /* Estilos para campos de empleados */
+            .employee-field {
+                background: rgba(30, 41, 59, 0.8) !important;
+                border: 1px solid rgba(0, 212, 255, 0.3) !important;
+                color: var(--progress-white) !important;
+                padding: 0.5rem 0.75rem !important;
+                border-radius: 0.5rem !important;
+                font-weight: 500 !important;
+                display: inline-block !important;
+                text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
+                transition: all 0.3s ease !important;
+            }
+            
+            .employee-field:hover {
+                background: rgba(0, 212, 255, 0.2) !important;
+                border-color: var(--progress-teal) !important;
+                transform: translateY(-1px) !important;
+            }
+            
+            /* Menú desplegable de acciones en tabla */
+            .dropdown-menu {
+                font-size: 0.75rem !important;
+                min-width: 160px !important;
+                box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075) !important;
+                border: 1px solid rgba(0, 0, 0, 0.125) !important;
+            }
+            
+            .dropdown-item {
+                padding: 0.4rem 0.8rem !important;
+                font-size: 0.75rem !important;
+                cursor: pointer !important;
+            }
+            
+            .dropdown-item:hover {
+                background-color: #f8f9fa !important;
+            }
+            
+            .dropdown-item i {
+                width: 16px !important;
+                text-align: center !important;
+                font-size: 0.8rem !important;
+            }
+            
+            .dropdown-item .me-2 {
+                margin-right: 0.5rem !important;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .responsive-btn {
+                padding: 0.2rem 0.3rem !important;
+                font-size: 0.7rem !important;
+            }
+            
+            .admin-table {
+                font-size: 0.7rem;
+            }
+            
+            .admin-table th,
+            .admin-table td {
+                padding: 0.3rem 0.2rem;
+            }
+            
+            /* En pantallas muy pequeñas, mostrar solo icono */
+            .responsive-btn .fa-eye::before {
+                content: "👁";
+                font-size: 1rem;
+            }
+            
+            .responsive-btn .fa-eye {
+                display: none;
+            }
+            
+            /* Botones aún más pequeños */
+            .btn-outline-info,
+            .btn-outline-warning,
+            .btn-outline-danger,
+            .btn-outline-primary {
+                padding: 0.2rem 0.3rem !important;
+                font-size: 0.6rem !important;
+                margin: 0.05rem !important;
+                min-width: 24px !important;
+                min-height: 24px !important;
+            }
+            
+            .btn-sm {
+                padding: 0.2rem 0.25rem !important;
+                font-size: 0.6rem !important;
+            }
+            
+            /* Asegurar que los botones principales sean visibles */
+            #addEmployeeBtn,
+            #adminExitBtn {
+                font-size: 0.75rem !important;
+                padding: 0.4rem !important;
+            }
+            
+            /* Botones de acción del admin en pantallas muy pequeñas */
+            .admin-action-btn {
+                padding: 0.2rem 0.3rem !important;
+                margin: 0.05rem !important;
+                min-width: 24px !important;
+                min-height: 24px !important;
+                font-size: 0.6rem !important;
+            }
+            
+            /* Menú desplegable en pantallas pequeñas */
+            .dropdown-menu {
+                font-size: 0.7rem !important;
+                min-width: 140px !important;
+            }
+            
+            .dropdown-item {
+                padding: 0.3rem 0.6rem !important;
+                font-size: 0.7rem !important;
+            }
+            
+            .dropdown-item i {
+                width: 14px !important;
+                font-size: 0.7rem !important;
+            }
+        }
     </style>
 </head>
 <body>
@@ -623,6 +1143,13 @@
                     <i class="fas fa-sign-in-alt me-2"></i>Iniciar Sesión
                 </button>
             </form>
+            
+            <!-- Forgot Password Link -->
+            <div class="text-center mt-3">
+                <button type="button" class="btn btn-link text-primary" onclick="showForgotPassword()">
+                    <i class="fas fa-key me-1"></i>¿Olvidaste tu contraseña?
+                </button>
+            </div>
         </div>
     </div>
 
@@ -669,9 +1196,14 @@
                     </div>
                     <div class="col-md-6 text-md-end mt-3 mt-md-0">
                         <span id="userInfo" class="me-3"></span>
-                        <button class="btn btn-outline-danger btn-sm" onclick="logout()">
-                            <i class="fas fa-sign-out-alt me-1"></i>Salir
-                        </button>
+                        <div class="mt-2">
+                            <button class="btn btn-outline-warning btn-sm me-2" onclick="showChangePassword()">
+                                <i class="fas fa-key me-1"></i>Cambiar Contraseña
+                            </button>
+                            <button class="btn btn-outline-danger btn-sm" onclick="logout()">
+                                <i class="fas fa-sign-out-alt me-1"></i>Salir
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -699,6 +1231,9 @@
                         <button class="btn btn-secondary btn-sm me-2" onclick="toggleCamera()">
                             <i class="fas fa-camera me-1"></i>Activar Cámara
                         </button>
+                        <button class="btn btn-warning btn-sm me-2" onclick="switchCamera()" id="switchCameraBtn" style="display: none;">
+                            <i class="fas fa-sync-alt me-1"></i>Cambiar Cámara
+                        </button>
                         <button class="btn btn-info btn-sm" onclick="getLocation()">
                             <i class="fas fa-sync me-1"></i>Actualizar Ubicación
                         </button>
@@ -717,8 +1252,13 @@
                 <div class="action-card">
                     <h4 class="mb-3">Mis Registros de Hoy</h4>
                     <div id="attendanceRecords" class="loading">
-                        <div class="spinner"></div>
-                        <p class="mt-2">Cargando registros...</p>
+                        <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem; border-width: 0.3em;">
+                            <span class="visually-hidden">Cargando...</span>
+                        </div>
+                        <p class="mt-2 text-primary fw-bold fs-5">
+                            <i class="fas fa-spinner fa-spin me-2"></i>
+                            <span class="loading-text">Cargando registros...</span>
+                        </p>
                     </div>
                 </div>
             </div>
@@ -726,18 +1266,51 @@
             <!-- Admin View -->
             <div id="adminView" class="hidden">
                 <div class="mb-4">
-                    <button class="btn btn-progress me-2" onclick="showEmployees()">
-                        <i class="fas fa-users me-1"></i>Empleados
-                    </button>
-                    <button class="btn btn-progress me-2" onclick="showAllAttendance()">
-                        <i class="fas fa-clock me-1"></i>Todos los Registros
-                    </button>
-                    <button id="addEmployeeBtn" class="btn btn-success me-2" onclick="showAddEmployee()">
-                        <i class="fas fa-user-plus me-1"></i>Agregar Empleado
-                    </button>
-                    <button id="adminExitBtn" class="btn btn-warning me-2" onclick="showAdminExitSelection()">
-                        <i class="fas fa-user-shield me-1"></i>Registrar Salida Administrativa
-                    </button>
+                    <div class="d-flex flex-wrap align-items-center justify-content-between">
+                    <!-- Botones para desktop -->
+                    <div class="d-none d-md-flex flex-wrap mb-2 mb-md-0">
+                        <button class="btn btn-progress me-2 mb-2 mb-md-0" onclick="showEmployees()">
+                            <i class="fas fa-users me-1"></i>
+                            <span>Empleados</span>
+                        </button>
+                        <button class="btn btn-progress me-2 mb-2 mb-md-0" onclick="showAllAttendance()">
+                            <i class="fas fa-clock me-1"></i>
+                            <span>Todos los Registros</span>
+                        </button>
+                        <button id="addEmployeeBtn" class="btn btn-success me-2 mb-2 mb-md-0" onclick="showAddEmployee()">
+                            <i class="fas fa-user-plus me-1"></i>
+                            <span>Agregar Empleado</span>
+                        </button>
+                        <button id="adminExitBtn" class="btn btn-warning mb-2 mb-md-0" onclick="showAdminExitSelection()">
+                            <i class="fas fa-user-shield me-1"></i>
+                            <span>Registrar Salida Administrativa</span>
+                        </button>
+                    </div>
+                    
+                    <!-- Menú para móviles -->
+                    <div class="d-md-none">
+                        <div class="dropdown">
+                            <button class="btn btn-primary dropdown-toggle w-100" type="button" id="adminMenuMobile" data-bs-toggle="dropdown">
+                                <i class="fas fa-cog me-2"></i>Menú Administrador
+                            </button>
+                            <ul class="dropdown-menu w-100">
+                                <li><a class="dropdown-item" href="#" onclick="showEmployees()">
+                                    <i class="fas fa-users me-2"></i>Empleados
+                                </a></li>
+                                <li><a class="dropdown-item" href="#" onclick="showAllAttendance()">
+                                    <i class="fas fa-clock me-2"></i>Todos los Registros
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item text-success" href="#" onclick="showAddEmployee()">
+                                    <i class="fas fa-user-plus me-2"></i>Agregar Empleado
+                                </a></li>
+                                <li><a class="dropdown-item text-warning" href="#" onclick="showAdminExitSelection()">
+                                    <i class="fas fa-user-shield me-2"></i>Registrar Salida Administrativa
+                                </a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
                 </div>
 
                 <!-- Employees Section -->
@@ -766,6 +1339,23 @@
 
                 <!-- All Attendance Section -->
                 <div id="attendanceSection" class="hidden">
+                    <!-- Resumen de Ingresos por Empleado -->
+                    <div class="card mb-4" style="background: rgba(30, 41, 59, 0.95); border: 1px solid var(--progress-teal);">
+                        <div class="card-header" style="background: linear-gradient(45deg, var(--progress-teal), var(--progress-blue)); border: none;">
+                            <h5 class="mb-0 text-white">
+                                <i class="fas fa-chart-bar me-2"></i>Resumen de Ingresos por Empleado
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="employeeSummary" class="row">
+                                <div class="col-12 text-center text-white">
+                                    <div class="spinner spinner-sm"></div>
+                                    <p class="mt-2">Calculando resumen...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <div class="admin-table">
                         <table class="table table-hover mb-0">
                             <thead>
@@ -773,8 +1363,8 @@
                                     <th>Empleado</th>
                                     <th>Tipo</th>
                                     <th>Fecha/Hora</th>
-                                    <th>Ubicación</th>
                                     <th>Foto</th>
+                                    <th>Acciones</th>
                                 </tr>
                             </thead>
                             <tbody id="attendanceTableBody">
@@ -795,29 +1385,28 @@
                                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                             </div>
                             <div class="modal-body">
-                                <form id="addEmployeeForm">
+                                <form id="addEmployeeForm" onsubmit="event.preventDefault(); addEmployee();">
                                     <div class="mb-3">
-                                        <label for="empName" class="form-label">Nombre</label>
-                                        <input type="text" class="form-control" id="empName" required>
+                                        <label for="employeeName" class="form-label">Nombre</label>
+                                        <input type="text" class="form-control" id="employeeName" required>
                                     </div>
                                     <div class="mb-3">
-                                        <label for="empEmail" class="form-label">Correo</label>
-                                        <input type="email" class="form-control" id="empEmail" required>
+                                        <label for="employeeEmail" class="form-label">Correo</label>
+                                        <input type="email" class="form-control" id="employeeEmail" required>
                                     </div>
                                     <div class="mb-3">
-                                        <label for="empPassword" class="form-label">Contraseña</label>
-                                        <input type="password" class="form-control" id="empPassword" required>
+                                        <label for="employeePassword" class="form-label">Contraseña</label>
+                                        <input type="password" class="form-control" id="employeePassword" required minlength="6">
                                     </div>
                                     <div class="mb-3">
-                                        <label for="empPosition" class="form-label">Puesto</label>
-                                        <input type="text" class="form-control" id="empPosition">
+                                        <label for="employeePosition" class="form-label">Puesto</label>
+                                        <input type="text" class="form-control" id="employeePosition" placeholder="Jefe">
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                        <button type="submit" class="btn btn-primary">Guardar Empleado</button>
                                     </div>
                                 </form>
-                            </div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                                <button type="button" class="btn btn-primary" onclick="addEmployee()">Guardar</button>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -825,7 +1414,132 @@
         </div>
     </div>
 
+    <!-- Change Password Modal -->
+    <div class="modal fade" id="changePasswordModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-key me-2"></i>Cambiar Contraseña
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="changePasswordForm">
+                        <div class="mb-3">
+                            <label for="currentPassword" class="form-label">Contraseña Actual</label>
+                            <input type="password" class="form-control" id="currentPassword" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="newPassword" class="form-label">Nueva Contraseña</label>
+                            <input type="password" class="form-control" id="newPassword" required minlength="6">
+                        </div>
+                        <div class="mb-3">
+                            <label for="confirmPassword" class="form-label">Confirmar Nueva Contraseña</label>
+                            <input type="password" class="form-control" id="confirmPassword" required minlength="6">
+                        </div>
+                        <div class="mb-3">
+                            <label for="securityQuestion" class="form-label">Pregunta de Seguridad</label>
+                            <select class="form-control" id="securityQuestion" required>
+                                <option value="">Selecciona una pregunta...</option>
+                                <option value="pet">¿Cuál es el nombre de tu primera mascota?</option>
+                                <option value="school">¿Cuál es el nombre de tu escuela primaria?</option>
+                                <option value="city">¿En qué ciudad naciste?</option>
+                                <option value="friend">¿Cuál es el nombre de tu mejor amigo/a?</option>
+                                <option value="food">¿Cuál es tu comida favorita?</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="securityAnswer" class="form-label">Respuesta de Seguridad</label>
+                            <input type="text" class="form-control" id="securityAnswer" required>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="changePassword()">Cambiar Contraseña</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Forgot Password Modal -->
+    <div class="modal fade" id="forgotPasswordModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-key me-2"></i>Recuperar Contraseña
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="forgotPasswordForm">
+                        <div class="mb-3">
+                            <label for="forgotEmail" class="form-label">Correo Electrónico</label>
+                            <input type="email" class="form-control" id="forgotEmail" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="forgotSecurityQuestion" class="form-label">Pregunta de Seguridad</label>
+                            <select class="form-control" id="forgotSecurityQuestion" required>
+                                <option value="">Selecciona una pregunta...</option>
+                                <option value="pet">¿Cuál es el nombre de tu primera mascota?</option>
+                                <option value="school">¿Cuál es el nombre de tu escuela primaria?</option>
+                                <option value="city">¿En qué ciudad naciste?</option>
+                                <option value="friend">¿Cuál es el nombre de tu mejor amigo/a?</option>
+                                <option value="food">¿Cuál es tu comida favorita?</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="forgotSecurityAnswer" class="form-label">Respuesta de Seguridad</label>
+                            <input type="text" class="form-control" id="forgotSecurityAnswer" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="newPasswordReset" class="form-label">Nueva Contraseña</label>
+                            <input type="password" class="form-control" id="newPasswordReset" required minlength="6">
+                        </div>
+                        <div class="mb-3">
+                            <label for="confirmPasswordReset" class="form-label">Confirmar Nueva Contraseña</label>
+                            <input type="password" class="form-control" id="confirmPasswordReset" required minlength="6">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="resetPassword()">Restablecer Contraseña</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="app.js"></script>
+    
+    <!-- Definición de emergencia para loadAllAttendance -->
+    <script>
+        // Definición inmediata para evitar ReferenceError
+        function loadAllAttendance() {
+            console.log('🚀 loadAllAttendance() - definición de emergencia desde HTML');
+            
+            // Esperar a que el archivo app.js se cargue completamente
+            if (typeof loadAllAttendanceImpl === 'function') {
+                return loadAllAttendanceImpl();
+            } else if (typeof window.loadAllAttendanceImpl === 'function') {
+                return window.loadAllAttendanceImpl();
+            } else {
+                // Recargar la página si la implementación no está disponible
+                console.error('❌ Implementación no disponible, recargando...');
+                alert('Recargando la página para cargar las funciones necesarias...');
+                setTimeout(() => {
+                    window.location.reload(true);
+                }, 1000);
+            }
+        }
+        
+        // Registrar globalmente
+        window.loadAllAttendance = loadAllAttendance;
+        console.log('✅ loadAllAttendance definida desde HTML');
+    </script>
+    
+    <script src="app.js?v=2026-final-fixed"></script>
 </body>
 </html>
