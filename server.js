@@ -39,18 +39,13 @@ app.use((req, res, next) => {
     next();
 });
 
-// Agregar headers especiales para ngrok y CORS
+// CORS simplificado para entorno local
 app.use((req, res, next) => {
-    // Headers para ngrok
+    // Headers para localhost
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, ngrok-skip-browser-warning, Cache-Control, Pragma');
     res.setHeader('Access-Control-Allow-Credentials', 'true');
-    
-    // Headers específicos para ngrok
-    if (req.headers.origin && req.headers.origin.includes('ngrok')) {
-        res.setHeader('ngrok-skip-browser-warning', 'true');
-    }
     
     // Manejar preflight OPTIONS
     if (req.method === 'OPTIONS') {
@@ -521,6 +516,19 @@ app.delete('/attendance/all', (req, res) => {
 app.delete('/admin/employees/:id', (req, res) => {
     const { id } = req.params;
     
+    console.log('🗑️ Solicitud DELETE para eliminar empleado:', {
+        id: id,
+        params: req.params,
+        body: req.body,
+        headers: req.headers
+    });
+    
+    // Verificar que el ID sea válido
+    if (!id || isNaN(id)) {
+        console.error('❌ ID inválido:', id);
+        return res.status(400).json({ error: 'ID de empleado inválido' });
+    }
+    
     // Verificar que no se elimine al último administrador
     database.get('SELECT COUNT(*) as count FROM employees WHERE role = "admin"', [], (err, row) => {
         if (err) {
@@ -528,24 +536,30 @@ app.delete('/admin/employees/:id', (req, res) => {
             return res.status(500).json({ error: 'Error interno del servidor' });
         }
         
+        console.log('📊 Conteo de administradores:', row.count);
+        
         if (row.count <= 1) {
+            console.log('❌ Intento eliminar último administrador');
             return res.status(400).json({ error: 'No se puede eliminar al último administrador' });
         }
         
         // Eliminar primero los registros de asistencia del empleado
         database.run('DELETE FROM attendance WHERE employee_id = ?', [id], (err) => {
             if (err) {
-                console.error('Error al eliminar registros de asistencia:', err);
+                console.error('❌ Error al eliminar registros de asistencia:', err);
                 return res.status(500).json({ error: 'Error al eliminar registros de asistencia' });
             }
+            
+            console.log('✅ Registros de asistencia eliminados para empleado:', id);
             
             // Eliminar al empleado
             database.run('DELETE FROM employees WHERE id = ?', [id], (err) => {
                 if (err) {
-                    console.error('Error al eliminar empleado:', err);
+                    console.error('❌ Error al eliminar empleado:', err);
                     return res.status(500).json({ error: 'Error al eliminar empleado' });
                 }
                 
+                console.log('✅ Empleado eliminado exitosamente:', id);
                 res.json({ message: 'Empleado y sus registros eliminados exitosamente' });
             });
         });

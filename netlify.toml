@@ -1,0 +1,18 @@
+[build]
+  publish = "public"
+  command = "echo 'Build completed'"
+
+[build.environment]
+  NODE_VERSION = "18"
+
+[[redirects]]
+  from = "/api/*"
+  to = "https://tu-servidor-backend.com/api/:splat"
+  status = 200
+  force = true
+
+[context.production.environment]
+  API_URL = "https://tu-servidor-backend.com"
+
+[context.deploy-preview.environment]
+  API_URL = "https://tu-servidor-backend.com"

@@ -13,28 +13,11 @@ let availableCameras = [];
 // Configuración de zona horaria para Colombia
 const TIMEZONE = 'America/Bogota';
 
-// API_BASE para Netlify y producción
+// API_BASE para entorno local únicamente
 const getApiBase = () => {
-    console.log('🔍 Configurando API_BASE para Netlify...');
+    console.log('🔍 Configurando API_BASE para entorno local...');
     console.log('🌐 Hostname:', window.location.hostname);
-    
-    // Si estamos en Netlify
-    if (window.location.hostname.includes('netlify.app') || 
-        window.location.hostname.includes('netlify.com')) {
-        console.log('📍 Entorno Netlify detectado');
-        return 'https://tu-servidor-backend.com/api';
-    }
-    
-    // Si estamos en desarrollo local
-    if (window.location.hostname === 'localhost' || 
-        window.location.hostname === '127.0.0.1') {
-        console.log('📍 Entorno local detectado');
-        return 'http://localhost:3000/api';
-    }
-    
-    // Para cualquier otro entorno
-    console.log('📍 Entorno producción detectado');
-    return 'https://tu-servidor-backend.com/api';
+    return 'http://localhost:3000/api';
 };
 
 const API_BASE = getApiBase();
@@ -129,16 +112,14 @@ function loginSuccess(user, token) {
     localStorage.setItem('progressToken', token);
     localStorage.setItem('progressUser', JSON.stringify(user));
     
-    document.getElementById('loginScreen').classList.add('hidden');
-    document.getElementById('mainApp').classList.remove('hidden');
+    document.getElementById('loginSection').classList.add('hidden');
+    document.getElementById('appSection').classList.remove('hidden');
     
     if (user.role === 'admin') {
-        document.getElementById('adminView').classList.remove('hidden');
-        document.getElementById('employeeView').classList.add('hidden');
+        document.getElementById('adminSection').classList.remove('hidden');
         loadEmployees();
     } else {
-        document.getElementById('employeeView').classList.remove('hidden');
-        document.getElementById('adminView').classList.add('hidden');
+        document.getElementById('employeeSection').classList.remove('hidden');
         loadTodayAttendance();
     }
 }
@@ -148,8 +129,8 @@ function logout() {
     localStorage.removeItem('progressUser');
     currentUser = null;
     
-    document.getElementById('loginScreen').classList.remove('hidden');
-    document.getElementById('mainApp').classList.add('hidden');
+    document.getElementById('loginSection').classList.remove('hidden');
+    document.getElementById('appSection').classList.add('hidden');
 }
 
 // Funciones principales
@@ -273,60 +254,9 @@ function displayAllRecords(records) {
     container.innerHTML = html;
 }
 
-function displayAllRecords(records) {
-    const container = document.getElementById('attendanceTableBody');
-    if (!container) return;
-    
-    if (records.length === 0) {
-        container.innerHTML = '<tr><td colspan="5" class="text-center">No hay registros</td></tr>';
-        return;
-    }
-    
-    let html = '';
-    records.forEach(record => {
-        const typeClass = record.type === 'entry' ? 'success' : 'danger';
-        const typeIcon = record.type === 'entry' ? 'fa-sign-in-alt' : 'fa-sign-out-alt';
-        const typeText = record.type === 'entry' ? 'Entrada' : 'Salida';
-        
-        const date = new Date(record.timestamp);
-        const dateStr = date.toLocaleDateString('es-CO');
-        const timeStr = date.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
-        
-        let photoUrl = '';
-        if (record.photo_path) {
-            photoUrl = `http://localhost:3000/${record.photo_path}`;
-        }
-        
-        html += `
-            <tr>
-                <td>${record.employee_name || 'N/A'}</td>
-                <td><span class="badge bg-${typeClass}">${typeText}</span></td>
-                <td>${dateStr} ${timeStr}</td>
-                <td>
-                    ${photoUrl ? 
-                        `<img src="${photoUrl}" alt="Foto" style="width: 40px; height: 40px; object-fit: cover; border-radius: 5px;">` : 
-                        'Sin foto'
-                    }
-                </td>
-                <td>
-                    <button class="btn btn-sm btn-primary" onclick="showRecordDetails(${record.id})">
-                        <i class="fas fa-eye"></i>
-                    </button>
-                </td>
-            </tr>
-        `;
-    });
-    
-    container.innerHTML = html;
-}
-
 function showEmployees() {
-    const employeesSection = document.getElementById('employeesSection');
-    const attendanceSection = document.getElementById('attendanceSection');
-    
-    if (employeesSection) employeesSection.classList.remove('hidden');
-    if (attendanceSection) attendanceSection.classList.add('hidden');
-    
+    document.getElementById('employeesSection').classList.remove('hidden');
+    document.getElementById('attendanceSection').classList.add('hidden');
     loadEmployees();
 }
 

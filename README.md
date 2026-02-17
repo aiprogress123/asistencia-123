@@ -1,3 +1,66 @@
+# Progress Assistance System
+
+🚀 **Sistema profesional de control de asistencia con registro fotográfico y geolocalización**
+
+## 🌐 **DEMO ONLINE**
+
+### Frontend (Vercel)
+🔗 **URL:** https://public-dxogmor9l-progresss-projects-509b99f1.vercel.app
+
+### Backend (Próximamente)
+🔗 **URL:** (Desplegando en Railway)
+
+## 📱 **Características**
+
+- ✅ **Registro de asistencia** con foto y geolocalización
+- ✅ **Gestión de empleados** completa (CRUD)
+- ✅ **Panel administrativo** con todos los registros
+- ✅ **Resumen de ingresos** por empleado
+- ✅ **Cálculo de horas extras** automático
+- ✅ **Exportación de datos** (CSV, PDF)
+- ✅ **Responsive design** para móviles
+- ✅ **PWA ready** - Instalable como app
+
+## 🔐 **Acceso Demo**
+
+- **Email:** `admin@progress.com`
+- **Contraseña:** `admin123`
+
+## 🚀 **Despliegue Rápido**
+
+### Frontend (Vercel)
+```bash
+cd public
+vercel --prod
+```
+
+### Backend (Railway)
+```bash
+railway login
+railway init
+railway up
+```
+
+## 📋 **Tecnologías**
+
+- **Frontend:** HTML5, CSS3, JavaScript, Bootstrap 5
+- **Backend:** Node.js, Express.js
+- **Database:** SQLite
+- **Auth:** JWT + bcrypt
+- **Upload:** Multer
+- **Deploy:** Vercel + Railway
+
+## 🎯 **Status**
+
+🟢 **Frontend:** ONLINE en Vercel  
+🟡 **Backend:** Desplegando en Railway  
+🚀 **Producción:** Casi listo
+
+---
+
+**© 2024 Progress Assistance System**  
+*Sistema profesional de gestión de asistencia*
+
 # Progress - Sistema de Control de Asistencia
 
 Sistema web de control de asistencia para empleados con registro fotográfico y geolocalización en tiempo real.
