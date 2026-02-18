@@ -45,20 +45,20 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         :root {
-            --progress-dark: #1a5f3f;
-            --progress-blue: #5dade2;
-            --progress-teal: #48c9b0;
-            --progress-green: #27ae60;
-            --progress-gold: #f39c12;
+            --progress-dark: #0a1628;
+            --progress-blue: #00d4ff;
+            --progress-teal: #00a8cc;
+            --progress-green: #00ff88;
+            --progress-gold: #ffb347;
             --progress-white: #ffffff;
-            --progress-gray: #ecf0f1;
-            --progress-light: #f8f9fa;
+            --progress-gray: #1e293b;
+            --progress-light: #334155;
         }
 
         body {
-            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 50%, #e9ecef 100%);
-            color: #000000;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #ffffff;
+            color: #000000;
             min-height: 100vh;
             position: relative;
             overflow-x: hidden;
@@ -72,17 +72,17 @@
             width: 100%;
             height: 100%;
             background: 
-                radial-gradient(circle at 20% 80%, rgba(93, 173, 226, 0.1) 0%, transparent 50%),
-                radial-gradient(circle at 80% 20%, rgba(72, 201, 176, 0.08) 0%, transparent 50%),
-                radial-gradient(circle at 40% 40%, rgba(26, 95, 63, 0.05) 0%, transparent 50%);
-            opacity: 1;
+                radial-gradient(circle at 20% 80%, var(--progress-gold) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, var(--progress-blue) 0%, transparent 50%),
+                radial-gradient(circle at 40% 40%, var(--progress-teal) 0%, transparent 50%);
+            opacity: 0.05;
             z-index: -1;
             animation: sparkle 8s ease-in-out infinite;
         }
 
         @keyframes sparkle {
-            0%, 100% { opacity: 0.4; }
-            50% { opacity: 0.8; }
+            0%, 100% { opacity: 0.05; }
+            50% { opacity: 0.1; }
         }
 
         .login-container {
@@ -93,11 +93,11 @@
         }
 
         .login-card {
-            background: linear-gradient(135deg, rgba(26, 95, 63, 0.95) 0%, rgba(72, 201, 176, 0.95) 100%);
+            background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
             border: 2px solid var(--progress-teal);
-            border-radius: 25px;
-            box-shadow: 0 20px 40px rgba(26, 95, 63, 0.15), 0 10px 20px rgba(93, 173, 226, 0.1);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 212, 255, 0.1);
             padding: 2rem;
             width: 100%;
             max-width: 400px;
@@ -117,46 +117,22 @@
         }
 
         .logo-section h1 {
-            color: #ffffff;
+            color: var(--progress-teal);
             font-weight: bold;
             margin-bottom: 0.5rem;
-            text-shadow: 0 0 10px var(--progress-blue);
+            text-shadow: 0 0 10px rgba(0, 168, 204, 0.3);
         }
 
         .logo-section p {
-            color: #ffffff;
-            font-size: 1.1rem;
+            color: #000000;
+            font-size: 0.9rem;
             margin-bottom: 0.5rem;
-            text-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
         }
 
         .logo-section .subtitle {
             color: var(--progress-gold);
-            font-size: 0.9rem;
-            text-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
-        }
-
-        .form-label {
-            color: #ffffff;
-            font-weight: 500;
-            text-shadow: 0 0 3px rgba(0, 0, 0, 0.5);
-        }
-
-        .form-control {
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            color: #ffffff;
-        }
-
-        .form-control:focus {
-            background: rgba(255, 255, 255, 0.15);
-            border-color: var(--progress-teal);
-            color: #ffffff;
-            box-shadow: 0 0 0 0.2rem rgba(72, 201, 176, 0.25);
-        }
-
-        .form-control::placeholder {
-            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.8rem;
+            font-style: italic;
         }
 
         .btn-progress {
@@ -173,70 +149,38 @@
         .btn-progress:hover {
             background: linear-gradient(45deg, var(--progress-blue), var(--progress-teal));
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(93, 173, 226, 0.4);
-            border-color: var(--progress-teal);
-        }
-
-        /* Estilo especial para botón de login - dorado */
-        .login-card .btn-progress {
-            background: linear-gradient(45deg, var(--progress-gold), #FFD700);
-            border: 1px solid var(--progress-gold);
-            color: #000000;
-            padding: 0.75rem 1.5rem;
-            border-radius: 10px;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3);
-        }
-
-        .login-card .btn-progress:hover {
-            background: linear-gradient(45deg, #FFD700, var(--progress-gold));
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(255, 215, 0, 0.4);
+            box-shadow: 0 10px 25px rgba(0, 212, 255, 0.4);
             border-color: var(--progress-gold);
-        }
-
-        .btn-action {
-            background: linear-gradient(135deg, var(--progress-dark) 0%, var(--progress-green) 100%);
-            color: var(--progress-white);
-            border: 2px solid var(--progress-teal);
-            padding: 12px 24px;
-            border-radius: 25px;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(26, 95, 63, 0.3);
-        }
-
-        .btn-action:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(26, 95, 63, 0.4);
-            background: linear-gradient(135deg, var(--progress-green) 0%, var(--progress-teal) 100%);
         }
 
         .main-container {
             padding: 1rem;
             max-width: 1200px;
             margin: 0 auto;
+            background: #ffffff;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
         }
 
         .header-section {
-            background: linear-gradient(135deg, rgba(26, 95, 63, 0.95) 0%, rgba(72, 201, 176, 0.95) 100%);
+            background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
             border: 2px solid var(--progress-teal);
-            border-radius: 20px;
+            border-radius: 15px;
             padding: 1.5rem;
             margin-bottom: 2rem;
-            box-shadow: 0 10px 30px rgba(26, 95, 63, 0.15), 0 5px 15px rgba(93, 173, 226, 0.1);
+            box-shadow: 0 10px 30px rgba(0, 212, 255, 0.1);
         }
 
         .action-card {
-            background: linear-gradient(135deg, rgba(26, 95, 63, 0.95) 0%, rgba(72, 201, 176, 0.95) 100%);
+            background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
             border: 2px solid var(--progress-teal);
-            border-radius: 20px;
+            border-radius: 15px;
             padding: 2rem;
             text-align: center;
-            box-shadow: 0 10px 30px rgba(26, 95, 63, 0.15), 0 5px 15px rgba(93, 173, 226, 0.1);
+            box-shadow: 0 10px 30px rgba(0, 212, 255, 0.1);
+            color: #000000;
         }
 
         h4.mb-3 {
@@ -296,8 +240,19 @@
             margin-right: 8px;
         }
 
+        .btn-action {
+            font-size: 1.2rem;
+            padding: 1rem 2rem;
+            margin: 0.5rem;
+            border-radius: 15px;
+            border: 2px solid transparent;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            color: var(--progress-white);
+        }
+
         .btn-entry {
-            background: linear-gradient(135deg, var(--progress-green) 0%, var(--progress-teal) 100%);
+            background: linear-gradient(45deg, var(--progress-green), #00cc6a);
             border-color: var(--progress-green);
             box-shadow: 0 4px 15px rgba(0, 255, 136, 0.3);
         }
@@ -352,48 +307,48 @@
         }
 
         .attendance-record {
-            background: rgba(255, 255, 255, 0.95);
+            background: rgba(30, 41, 59, 0.95);
             backdrop-filter: blur(10px);
-            border: 1px solid rgba(0, 212, 255, 0.3);
+            border: 1px solid var(--progress-teal);
             border-radius: 10px;
             padding: 1rem;
             margin-bottom: 1rem;
             border-left: 4px solid var(--progress-blue);
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1), 0 2px 8px rgba(0, 212, 255, 0.05);
-            color: #000000;
+            box-shadow: 0 4px 15px rgba(0, 212, 255, 0.2);
+            color: var(--progress-white);
         }
 
         .attendance-record h6 {
-            color: #000000 !important;
+            color: var(--progress-white) !important;
             font-weight: 600;
-            text-shadow: none;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
         }
 
         .attendance-record small {
-            color: #666666 !important;
+            color: rgba(255, 255, 255, 0.9) !important;
             font-weight: 400;
-            text-shadow: none;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
         }
 
         .admin-table {
-            background: rgba(255, 255, 255, 0.95);
+            background: rgba(30, 41, 59, 0.95);
             backdrop-filter: blur(10px);
-            border: 1px solid rgba(0, 212, 255, 0.3);
+            border: 1px solid var(--progress-teal);
             border-radius: 15px;
             overflow: hidden;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12), 0 5px 15px rgba(0, 212, 255, 0.08);
+            box-shadow: 0 10px 30px rgba(0, 212, 255, 0.2);
         }
 
         .admin-table th {
             background: linear-gradient(45deg, var(--progress-teal), var(--progress-blue));
-            color: #000000;
+            color: var(--progress-white);
             border: none;
             padding: 1rem;
             font-weight: 600;
         }
 
         .admin-table td {
-            color: #000000;
+            color: var(--progress-white);
             border-color: rgba(0, 212, 255, 0.2);
             font-weight: 500;
         }
@@ -569,43 +524,32 @@
         .badge {
             font-weight: 500;
             border: 1px solid transparent;
-            color: var(--progress-white) !important;
         }
 
         .bg-primary {
             background: var(--progress-blue) !important;
             border-color: var(--progress-blue);
-            color: var(--progress-white) !important;
         }
 
         .bg-success {
             background: var(--progress-green) !important;
             border-color: var(--progress-green);
-            color: var(--progress-white) !important;
         }
 
         .bg-warning {
             background: var(--progress-gold) !important;
             border-color: var(--progress-gold);
-            color: var(--progress-white) !important;
+            color: var(--progress-dark);
         }
 
         .bg-danger {
             background: #ff6b6b !important;
             border-color: #ff6b6b;
-            color: var(--progress-white) !important;
         }
 
         .bg-info {
             background: var(--progress-teal) !important;
             border-color: var(--progress-teal);
-            color: var(--progress-white) !important;
-        }
-
-        .bg-dark {
-            background: var(--progress-dark) !important;
-            border-color: var(--progress-dark);
-            color: var(--progress-white) !important;
         }
 
         .bg-secondary {
@@ -791,49 +735,11 @@
             /* Botones principales del admin */
             #addEmployeeBtn,
             #adminExitBtn {
-                display: inline-block !important;
-                width: auto !important;
-                margin: 0 !important;
-                font-size: 0.6rem !important;
-                padding: 0.25rem 0.35rem !important;
-                min-width: auto !important;
-                white-space: nowrap !important;
-                border-width: 1px !important;
-                height: auto !important;
-                line-height: 1.2 !important;
-            }
-            
-            /* Ajustar tamaño de botones para que quepan 4 en una fila */
-            .btn-progress {
-                font-size: 0.6rem !important;
-                padding: 0.25rem 0.35rem !important;
-                min-width: auto !important;
-                white-space: nowrap !important;
-                margin: 0 !important;
-                border-width: 1px !important;
-                height: auto !important;
-                line-height: 1.2 !important;
-            }
-            
-            /* Contenedor de botones del header */
-            .d-flex.align-items-center.justify-content-start {
-                gap: 0.2rem !important;
-                flex-wrap: nowrap !important;
-                overflow-x: hidden !important;
-            }
-            
-            @media (max-width: 768px) {
-                .d-flex.align-items-center.justify-content-start {
-                    flex-wrap: wrap !important;
-                }
-                
-                .btn-progress,
-                #addEmployeeBtn,
-                #adminExitBtn {
-                    font-size: 0.55rem !important;
-                    padding: 0.2rem 0.3rem !important;
-                    margin-bottom: 0.25rem !important;
-                }
+                display: block !important;
+                width: 100% !important;
+                margin: 0.25rem 0 !important;
+                padding: 0.5rem !important;
+                font-size: 0.8rem !important;
             }
             
             /* Ocultar botones de navegación en móvil */
@@ -891,7 +797,71 @@
             }
             
             .admin-action-btn .fa {
-                display: block !important;
+                margin-right: 0 !important;
+            }
+            
+            /* Mejoras de visibilidad para adminView */
+            #adminView {
+                color: var(--progress-white) !important;
+            }
+            
+            #adminView .btn {
+                color: var(--progress-white) !important;
+                font-weight: 500;
+                text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+            }
+            
+            #adminView .btn:hover {
+                color: var(--progress-white) !important;
+                filter: brightness(1.1);
+            }
+            
+            #adminView .dropdown-menu {
+                background: rgba(30, 41, 59, 0.95) !important;
+                border: 1px solid var(--progress-teal);
+            }
+            
+            #adminView .dropdown-item {
+                color: var(--progress-white) !important;
+                font-weight: 500;
+            }
+            
+            #adminView .dropdown-item:hover {
+                background: var(--progress-teal);
+                color: var(--progress-white) !important;
+            }
+            
+            #adminView .text-success {
+                color: var(--progress-green) !important;
+            }
+            
+            #adminView .text-warning {
+                color: var(--progress-gold) !important;
+            }
+            
+            #adminView h1, #adminView h2, #adminView h3, #adminView h4, #adminView h5, #adminView h6 {
+                color: var(--progress-white) !important;
+                text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            }
+            
+            #adminView .card {
+                background: rgba(30, 41, 59, 0.95) !important;
+                border: 1px solid var(--progress-teal);
+                color: var(--progress-white) !important;
+            }
+            
+            #adminView .table {
+                color: var(--progress-white) !important;
+            }
+            
+            #adminView .table th {
+                color: var(--progress-blue) !important;
+                font-weight: 600;
+                border-color: var(--progress-teal) !important;
+            }
+            
+            #adminView .table td {
+                border-color: rgba(0, 212, 255, 0.2) !important;
             }
             
             /* Texto de fecha y hora en negro */
@@ -1075,7 +1045,7 @@
             }
             
             .responsive-btn .fa-eye {
-                display: inline-block !important;
+                display: none;
             }
             
             /* Botones aún más pequeños */
@@ -1098,23 +1068,8 @@
             /* Asegurar que los botones principales sean visibles */
             #addEmployeeBtn,
             #adminExitBtn {
-                font-size: 0.6rem !important;
-                padding: 0.25rem 0.35rem !important;
-                display: inline-block !important;
-                width: auto !important;
-                white-space: nowrap !important;
-                border-width: 1px !important;
-                height: auto !important;
-                line-height: 1.2 !important;
-            }
-            
-            .btn-progress {
-                font-size: 0.6rem !important;
-                padding: 0.25rem 0.35rem !important;
-                white-space: nowrap !important;
-                border-width: 1px !important;
-                height: auto !important;
-                line-height: 1.2 !important;
+                font-size: 0.75rem !important;
+                padding: 0.4rem !important;
             }
             
             /* Botones de acción del admin en pantallas muy pequeñas */
@@ -1142,19 +1097,6 @@
                 font-size: 0.7rem !important;
             }
         }
-        
-        /* Estilos para botón de olvidaste contraseña en login */
-        .login-card .btn-link.text-primary {
-            color: var(--progress-gold) !important;
-            text-decoration: none;
-            font-weight: 500;
-            text-shadow: 0 0 3px rgba(0, 0, 0, 0.5);
-        }
-
-        .login-card .btn-link.text-primary:hover {
-            color: #FFD700 !important;
-            text-decoration: underline;
-        }
     </style>
 </head>
 <body>
@@ -1162,7 +1104,34 @@
     <div id="loginScreen" class="login-container">
         <div class="login-card">
             <div class="logo-section">
-                <img src="assets/logo.png" alt="Progress Net Logo" style="width: 200px; height: 200px; margin-bottom: 1rem; filter: drop-shadow(0 0 20px var(--progress-teal)); border-radius: 50%; object-fit: cover;">
+                <svg width="160" height="160" viewBox="0 0 120 120" style="margin-bottom: 1rem; filter: drop-shadow(0 0 20px var(--progress-blue));">
+                  <defs>
+                    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" style="stop-color:#0a1628;stop-opacity:1"></stop>
+                      <stop offset="100%" style="stop-color:#00a8cc;stop-opacity:1"></stop>
+                    </linearGradient>
+                    <filter id="glow">
+                      <feGaussianBlur stdDeviation="3" result="coloredBlur"></feGaussianBlur>
+                      <feMerge>
+                        <feMergeNode in="coloredBlur"></feMergeNode>
+                        <feMergeNode in="SourceGraphic"></feMergeNode>
+                      </feMerge>
+                    </filter>
+                  </defs>
+                  
+                  <!-- Background circle -->
+                  <circle cx="60" cy="60" r="55" fill="url(#bgGradient)" stroke="#00d4ff" stroke-width="2"></circle>
+                  
+                  <!-- Play button triangle -->
+                  <path d="M 45 40 L 45 80 L 80 60 Z" fill="#00ff88" filter="url(#glow)"></path>
+                  
+                  <!-- P letter -->
+                  <text x="60" y="75" font-family="Arial, sans-serif" font-size="28" font-weight="bold" text-anchor="middle" fill="#ffffff" filter="url(#glow)">P</text>
+                  
+                  <!-- Progress NET text -->
+                  <text x="60" y="100" font-family="Arial, sans-serif" font-size="10" text-anchor="middle" fill="#ffffff" font-weight="600">PROGRESS NET</text>
+                </svg>
+                <h1>PROGRESS NET</h1>
                 <p>Sistema de Control de Asistencia</p>
                 <p class="subtitle">AUDIO - VIDEO - INTERPRETACIÓN - STREAMING</p>
             </div>
@@ -1195,23 +1164,49 @@
             <!-- Header -->
             <div class="header-section">
                 <div class="row align-items-center">
-                    <div class="col-md-6 d-flex align-items-center">
-                        <img src="assets/logo.png" alt="Progress Net Logo" style="width: 120px; height: 120px; filter: drop-shadow(0 0 10px var(--progress-teal)); border-radius: 50%; object-fit: cover;">
-                        <div class="text-center flex-grow-1">
-                            <h2 class="mb-0 text-white">
-                                Sistema de Asistencia
-                            </h2>
-                            <p class="text-muted mb-0">Control de Personal</p>
-                        </div>
+                    <div class="col-md-6">
+                        <svg width="50" height="50" viewBox="0 0 120 120" style="margin-right: 15px; filter: drop-shadow(0 0 10px var(--progress-blue));">
+                                  <defs>
+                                    <linearGradient id="bgGradient2" x1="0%" y1="0%" x2="100%" y2="100%">
+                                      <stop offset="0%" style="stop-color:#0a1628;stop-opacity:1" />
+                                      <stop offset="100%" style="stop-color:#00a8cc;stop-opacity:1" />
+                                    </linearGradient>
+                                    <filter id="glow2">
+                                      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                                      <feMerge>
+                                        <feMergeNode in="coloredBlur"/>
+                                        <feMergeNode in="SourceGraphic"/>
+                                      </feMerge>
+                                    </filter>
+                                  </defs>
+                                  
+                                  <!-- Background circle -->
+                                  <circle cx="60" cy="60" r="55" fill="url(#bgGradient2)" stroke="#00d4ff" stroke-width="2"/>
+                                  
+                                  <!-- Play button triangle -->
+                                  <path d="M 45 40 L 45 80 L 80 60 Z" fill="#00ff88" filter="url(#glow2)"/>
+                                  
+                                  <!-- P letter -->
+                                  <text x="60" y="75" font-family="Arial, sans-serif" font-size="28" font-weight="bold" 
+                                        text-anchor="middle" fill="#ffffff" filter="url(#glow2)">P</text>
+                                  
+                                  <!-- Progress NET text -->
+                                  <text x="60" y="100" font-family="Arial, sans-serif" font-size="10" 
+                                        text-anchor="middle" fill="#ffffff" font-weight="600">PROGRESS NET</text>
+                                </svg>
+                        <h2 class="mb-0 d-inline-block text-white">
+                            PROGRESS NET
+                        </h2>
+                        <p class="text-muted mb-0">Sistema de Asistencia</p>
                     </div>
                     <div class="col-md-6 text-md-end mt-3 mt-md-0">
                         <span id="userInfo" class="me-3"></span>
                         <div class="mt-2">
-                            <button class="btn btn-warning btn-sm me-2" onclick="showChangePassword()">
+                            <button class="btn btn-outline-warning btn-sm me-2" onclick="showChangePassword()">
                                 <i class="fas fa-key me-1"></i>Cambiar Contraseña
                             </button>
-                            <button class="btn btn-danger btn-sm" onclick="logout()" style="background-color: #dc3545; border-color: #dc3545; color: #000000;">
-                                <i class="fas fa-sign-out-alt me-1" style="color: #000000;"></i>Salir
+                            <button class="btn btn-outline-danger btn-sm" onclick="logout()">
+                                <i class="fas fa-sign-out-alt me-1"></i>Salir
                             </button>
                         </div>
                     </div>
@@ -1274,26 +1269,26 @@
             </div>
 
             <!-- Admin View -->
-            <div id="adminView" class="hidden" style="color: #000000;">
+            <div id="adminView" class="hidden">
                 <div class="mb-4">
                     <div class="d-flex flex-wrap align-items-center justify-content-between">
                     <!-- Botones para desktop y móvil -->
-                    <div class="d-flex align-items-center justify-content-start" style="gap: 0.15rem; flex-wrap: nowrap; overflow-x: hidden;">
-                        <button class="btn btn-progress" onclick="showEmployees()" style="white-space: nowrap;">
+                    <div class="d-flex flex-wrap mb-2 mb-md-0">
+                        <button class="btn btn-progress me-2 mb-2 mb-md-0" onclick="showEmployees()">
                             <i class="fas fa-users me-1"></i>
                             <span>Empleados</span>
                         </button>
-                        <button class="btn btn-progress" onclick="showAllAttendance()" style="white-space: nowrap;">
+                        <button class="btn btn-progress me-2 mb-2 mb-md-0" onclick="showAllAttendance()">
                             <i class="fas fa-clock me-1"></i>
                             <span>Todos los Registros</span>
                         </button>
-                        <button id="addEmployeeBtn" class="btn btn-success" onclick="showAddEmployee()" style="white-space: nowrap;">
+                        <button id="addEmployeeBtn" class="btn btn-success me-2 mb-2 mb-md-0" onclick="showAddEmployee()">
                             <i class="fas fa-user-plus me-1"></i>
                             <span>Agregar Empleado</span>
                         </button>
-                        <button id="adminExitBtn" class="btn btn-warning" onclick="showAdminExitSelection()" style="white-space: nowrap;">
+                        <button id="adminExitBtn" class="btn btn-warning mb-2 mb-md-0" onclick="showAdminExitSelection()">
                             <i class="fas fa-user-shield me-1"></i>
-                            <span>Salida Administrativa</span>
+                            <span>Registrar Salida Administrativa</span>
                         </button>
                     </div>
                     
@@ -1326,7 +1321,7 @@
                 <!-- Employees Section -->
                 <div id="employeesSection">
                     <div class="admin-table">
-                        <table class="table table-hover mb-0" style="color: #000000;">
+                        <table class="table table-hover mb-0">
                             <thead>
                                 <tr>
                                     <th>ID</th>
@@ -1334,12 +1329,13 @@
                                     <th>Correo</th>
                                     <th>Puesto</th>
                                     <th>Rol</th>
+                                    <th>Fecha de Creación</th>
                                     <th>Acciones</th>
                                 </tr>
                             </thead>
                             <tbody id="employeesTableBody">
                                 <tr>
-                                    <td colspan="6" class="text-center">Cargando empleados...</td>
+                                    <td colspan="7" class="text-center">Cargando empleados...</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -1376,7 +1372,7 @@
                                     <th>Acciones</th>
                                 </tr>
                             </thead>
-                            <tbody id="attendanceRecordsBody">
+                            <tbody id="attendanceTableBody">
                                 <tr>
                                     <td colspan="5" class="text-center">Cargando registros...</td>
                                 </tr>
@@ -1396,75 +1392,28 @@
                             <div class="modal-body">
                                 <form id="addEmployeeForm" onsubmit="event.preventDefault(); addEmployee();">
                                     <div class="mb-3">
-                                        <label for="newEmployeeName" class="form-label">Nombre</label>
-                                        <input type="text" class="form-control" id="newEmployeeName" required>
+                                        <label for="employeeName" class="form-label">Nombre</label>
+                                        <input type="text" class="form-control" id="employeeName" required>
                                     </div>
                                     <div class="mb-3">
-                                        <label for="newEmployeeEmail" class="form-label">Correo</label>
-                                        <input type="email" class="form-control" id="newEmployeeEmail" required>
+                                        <label for="employeeEmail" class="form-label">Correo</label>
+                                        <input type="email" class="form-control" id="employeeEmail" required>
                                     </div>
                                     <div class="mb-3">
-                                        <label for="newEmployeePassword" class="form-label">Contraseña</label>
-                                        <input type="password" class="form-control" id="newEmployeePassword" required minlength="6">
+                                        <label for="employeePassword" class="form-label">Contraseña</label>
+                                        <input type="password" class="form-control" id="employeePassword" required minlength="6">
                                     </div>
                                     <div class="mb-3">
-                                        <label for="newEmployeePosition" class="form-label">Puesto</label>
-                                        <input type="text" class="form-control" id="newEmployeePosition" placeholder="Ej: Gerente, Desarrollador, etc." required>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label for="newEmployeeRole" class="form-label">Rol</label>
-                                        <select class="form-control" id="newEmployeeRole" required>
-                                            <option value="employee">Empleado</option>
-                                            <option value="coordinator">Coordinador</option>
-                                            <option value="jefe">Jefe</option>
-                                            <option value="ban">Van</option>
-                                        </select>
+                                        <label for="employeePosition" class="form-label">Puesto</label>
+                                        <input type="text" class="form-control" id="employeePosition" placeholder="Jefe">
                                     </div>
                                     <div class="modal-footer">
-                                        <button type="button" class="btn btn-secondary" onclick="closeModal('addEmployeeModal')">Cancelar</button>
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                                         <button type="submit" class="btn btn-primary">Guardar Empleado</button>
                                     </div>
                                 </form>
                         </div>
                     </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Edit Employee Modal -->
-    <div class="modal fade" id="editEmployeeModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Editar Empleado</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="editEmployeeForm" onsubmit="event.preventDefault(); updateEmployee();">
-                        <input type="hidden" id="editEmployeeId">
-                        <div class="mb-3">
-                            <label for="editEmployeeName" class="form-label">Nombre</label>
-                            <input type="text" class="form-control" id="editEmployeeName" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="editEmployeeEmail" class="form-label">Correo</label>
-                            <input type="email" class="form-control" id="editEmployeeEmail" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="editEmployeeRole" class="form-label">Rol</label>
-                            <select class="form-control" id="editEmployeeRole" required>
-                                <option value="employee">Empleado</option>
-                                <option value="coordinator">Coordinador</option>
-                                <option value="ban">Van</option>
-                                <option value="admin">Administrador</option>
-                            </select>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" onclick="closeModal('editEmployeeModal')">Cancelar</button>
-                            <button type="submit" class="btn btn-primary">Actualizar Empleado</button>
-                        </div>
-                    </form>
                 </div>
             </div>
         </div>
@@ -1596,6 +1545,6 @@
         console.log('✅ loadAllAttendance definida desde HTML');
     </script>
     
-    <script src="app.js?v=2026-production-complete-system"></script>
+    <script src="app.js?v=2026-production-clean"></script>
 </body>
 </html>

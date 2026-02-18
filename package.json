@@ -2,7 +2,7 @@
   "name": "progress-assistance-system",
   "version": "2.0.0",
   "description": "Sistema profesional de control de asistencia con registro fotográfico y geolocalización",
-  "main": "server-railway.js",
+  "main": "deploy-backend.js",
   "scripts": {
     "start": "node server-railway.js",
     "dev": "node server.js",

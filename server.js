@@ -87,33 +87,56 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 
+// Inicializar base de datos
 database.serialize(() => {
+    // Crear tabla de empleados si no existe
     database.run(`
         CREATE TABLE IF NOT EXISTS employees (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
             email TEXT UNIQUE NOT NULL,
             password TEXT NOT NULL,
-            position TEXT DEFAULT 'Jefe',
+            position TEXT,
             role TEXT DEFAULT 'employee',
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     `);
-    
+
+    // Crear tabla de asistencia si no existe
     database.run(`
         CREATE TABLE IF NOT EXISTS attendance (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            employee_id INTEGER NOT NULL,
+            employee_id INTEGER,
+            employee_name TEXT NOT NULL,
             type TEXT NOT NULL CHECK (type IN ('entry', 'exit')),
             timestamp DATETIME NOT NULL,
             photo_path TEXT,
+            photo TEXT,
             latitude REAL,
             longitude REAL,
+            device_info TEXT,
+            admin_exit BOOLEAN DEFAULT 0,
+            reason TEXT,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (employee_id) REFERENCES employees(id)
+            FOREIGN KEY (employee_id) REFERENCES employees (id)
         )
     `);
-    
+
+    // Agregar columnas nuevas si no existen (migración)
+    database.run(`ALTER TABLE attendance ADD COLUMN admin_exit BOOLEAN DEFAULT 0`, (err) => {
+        if (err && !err.message.includes('duplicate column name')) {
+            console.error('Error agregando columna admin_exit:', err);
+        }
+    });
+
+    database.run(`ALTER TABLE attendance ADD COLUMN reason TEXT`, (err) => {
+        if (err && !err.message.includes('duplicate column name')) {
+            console.error('Error agregando columna reason:', err);
+        }
+    });
+
+    console.log('✅ Base de datos inicializada y migrada');
+
     database.get("SELECT COUNT(*) as count FROM employees WHERE role = 'admin'", (err, row) => {
         if (err) {
             console.error(err);
@@ -148,15 +171,22 @@ database.serialize(() => {
 function authenticateToken(req, res, next) {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
-
+    
+    console.log('🔍 Auth Header:', authHeader);
+    console.log('🔑 Token:', token ? token.substring(0, 20) + '...' : 'null');
+    
     if (!token) {
+        console.log('❌ No token proporcionado');
         return res.status(401).json({ error: 'Token requerido' });
     }
-
+    
     jwt.verify(token, JWT_SECRET, (err, user) => {
         if (err) {
-            return res.status(403).json({ error: 'Token inválido' });
+            console.log('❌ Error verificando token:', err.message);
+            return res.status(401).json({ error: 'Token inválido' });
         }
+        
+        console.log('✅ Token válido para usuario:', user.email, 'rol:', user.role);
         req.user = user;
         next();
     });
@@ -579,6 +609,121 @@ app.get('/api/ngrok-test', (req, res) => {
         headers: req.headers,
         origin: req.headers.origin
     });
+});
+
+// Ruta para registrar salida administrativa
+app.post('/api/admin/admin-exit', authenticateToken, (req, res) => {
+    console.log('🛡️ Recibida petición de salida administrativa desde usuario:', req.user.email, 'rol:', req.user.role);
+    
+    if (req.user.role !== 'admin') {
+        console.log('❌ Usuario no autorizado para salida administrativa:', req.user.role);
+        return res.status(403).json({ error: 'No autorizado para salida administrativa' });
+    }
+    
+    const { employee_name, type, timestamp, reason, admin_exit } = req.body;
+    
+    if (!employee_name || !type || !timestamp) {
+        console.error('❌ Datos incompletos para salida administrativa:', { employee_name: !!employee_name, type: !!type, timestamp: !!timestamp });
+        return res.status(400).json({ error: 'Datos incompletos para salida administrativa' });
+    }
+    
+    // Buscar ID del empleado por nombre
+    database.get(
+        'SELECT id FROM employees WHERE name = ?',
+        [employee_name],
+        (err, employee) => {
+            if (err) {
+                console.error('❌ Error buscando empleado:', err);
+                return res.status(500).json({ error: 'Error al buscar empleado' });
+            }
+            
+            if (!employee) {
+                console.error('❌ Empleado no encontrado:', employee_name);
+                return res.status(404).json({ error: 'Empleado no encontrado' });
+            }
+            
+            // Insertar registro de salida administrativa
+            database.run(`
+                INSERT INTO attendance (employee_id, type, timestamp, photo, latitude, longitude, admin_exit, reason)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            `, [
+                employee.id,
+                type,
+                timestamp,
+                null, // No hay foto para salida administrativa
+                null, // No hay ubicación para salida administrativa
+                admin_exit || true,
+                reason || 'Salida administrativa'
+            ], function(err) {
+                if (err) {
+                    console.error('❌ Error insertando salida administrativa:', err);
+                    return res.status(500).json({ error: 'Error al registrar salida administrativa' });
+                }
+                
+                console.log('✅ Salida administrativa registrada exitosamente para:', employee_name);
+                res.json({ 
+                    success: true, 
+                    message: 'Salida administrativa registrada correctamente',
+                    id: this.lastID 
+                });
+            });
+        }
+    );
+});
+
+// Rutas para actualizar rol y puesto de empleados
+app.put('/api/admin/employees/:id/position', authenticateToken, express.json(), (req, res) => {
+    console.log('📝 Recibida petición para actualizar puesto:', req.body);
+    const { id } = req.params;
+    const { position } = req.body;
+    
+    if (!position) {
+        return res.status(400).json({ error: 'El puesto es requerido' });
+    }
+    
+    database.run(
+        'UPDATE employees SET position = ? WHERE id = ?',
+        [position, id],
+        function(err) {
+            if (err) {
+                console.error('❌ Error actualizando puesto:', err);
+                return res.status(500).json({ error: 'Error al actualizar puesto' });
+            }
+            
+            console.log('✅ Puesto actualizado para empleado ID:', id, 'nuevo puesto:', position);
+            res.json({ message: 'Puesto actualizado correctamente' });
+        }
+    );
+});
+
+app.put('/api/admin/employees/:id/role', authenticateToken, express.json(), (req, res) => {
+    console.log('👤 Recibida petición para actualizar rol:', req.body);
+    const { id } = req.params;
+    const { role } = req.body;
+    
+    if (!role) {
+        return res.status(400).json({ error: 'El rol es requerido' });
+    }
+    
+    // Validar roles permitidos
+    const validRoles = ['employee', 'coordinator', 'jefe', 'ban'];
+    if (!validRoles.includes(role)) {
+        return res.status(400).json({ error: 'Rol no válido' });
+    }
+    
+    database.run(
+        'UPDATE employees SET role = ? WHERE id = ?',
+        [role, id],
+        function(err) {
+            if (err) {
+                console.error('❌ Error actualizando rol:', err);
+                return res.status(500).json({ error: 'Error al actualizar rol' });
+            }
+            
+            console.log('✅ Rol actualizado para empleado ID:', id, 'nuevo rol:', role);
+            res.json({ message: 'Rol actualizado correctamente' });
+        }
+    );
 });
 
 // Endpoint de health check para Docker/Producción
