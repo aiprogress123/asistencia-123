@@ -11,7 +11,7 @@ services:
       - PORT=3000
     volumes:
       - ./uploads:/app/uploads
-      - ./progress_net_assistance.database:/app/progress_net_assistance.database
+      - ./progress.db:/app/progress.db
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]

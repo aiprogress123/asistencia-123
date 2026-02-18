@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const sqlite3 = require('sqlite3').verbose();
+const { Pool } = require('pg');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
@@ -11,11 +11,17 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'progress-secret-2024';
 
-// Database
-const db = new sqlite3.Database('./progress.db');
+// Database - PostgreSQL para producción
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+});
 
 // Middleware
-app.use(cors());
+app.use(cors({
+    origin: '*',
+    credentials: true
+}));
 app.use(express.json());
 app.use(express.static('public'));
 
@@ -36,12 +42,21 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 
-// Initialize database
-db.serialize(() => {
-    db.run(`CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        email TEXT UNIQUE NOT NULL,
+// Inicializar base de datos PostgreSQL
+async function initDatabase() {
+  try {
+    // Crear tabla de empleados si no existe
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS employees (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        email VARCHAR(255) UNIQUE NOT NULL,
+        password VARCHAR(255) NOT NULL,
+        position VARCHAR(255),
+        role VARCHAR(50) DEFAULT 'employee',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
         password TEXT NOT NULL,
         role TEXT DEFAULT 'employee',
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -94,6 +109,35 @@ app.get('/api/admin/employees', (req, res) => {
         });
     } catch (error) {
         res.status(401).json({ error: 'Token inválido' });
+    }
+});
+
+// Ruta para obtener registros del usuario actual
+app.get('/api/attendance', (req, res) => {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    
+    if (!token) {
+        return res.status(401).json({ error: 'Token requerido' });
+    }
+    
+    try {
+        const decoded = jwt.verify(token, JWT_SECRET);
+        const employeeId = decoded.id;
+        
+        db.all(`
+            SELECT a.*, u.name as employee_name 
+            FROM attendance a 
+            LEFT JOIN users u ON a.employee_id = u.id 
+            WHERE a.employee_id = ? 
+            ORDER BY a.timestamp DESC
+        `, [employeeId], (err, rows) => {
+            if (err) {
+                return res.status(500).json({ error: 'Error al obtener registros' });
+            }
+            res.json(rows);
+        });
+    } catch (error) {
+        return res.status(401).json({ error: 'Token inválido' });
     }
 });
 

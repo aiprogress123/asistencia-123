@@ -13,10 +13,10 @@ if (process.env.NODE_ENV === 'production') {
     // En producción, necesitarás PostgreSQL o similar
     // Por ahora, usaremos SQLite para desarrollo local
     const sqlite3 = require('sqlite3').verbose();
-    database = new sqlite3.Database('progress_net_assistance.database');
+    database = new sqlite3.Database('progress.db');
 } else {
     const sqlite3 = require('sqlite3').verbose();
-    database = new sqlite3.Database('progress_net_assistance.database');
+    database = new sqlite3.Database('progress.db');
 }
 
 const app = express();
@@ -192,6 +192,88 @@ function authenticateToken(req, res, next) {
     });
 }
 
+// Endpoint de registro para empleados
+app.post('/api/register', (req, res) => {
+    console.log('🚀 Petición de registro recibida');
+    console.log('📧 Email:', req.body.email);
+    console.log('👤 Nombre:', req.body.name);
+    
+    const { name, email, password, position } = req.body;
+
+    // Validaciones básicas
+    if (!name || !email || !password) {
+        console.error('❌ Campos incompletos');
+        return res.status(400).json({ error: 'Nombre, email y contraseña son requeridos' });
+    }
+
+    if (password.length < 6) {
+        console.error('❌ Contraseña muy corta');
+        return res.status(400).json({ error: 'La contraseña debe tener al menos 6 caracteres' });
+    }
+
+    // Validar formato de email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        console.error('❌ Email inválido');
+        return res.status(400).json({ error: 'El formato del email no es válido' });
+    }
+
+    // Verificar si el usuario ya existe
+    database.get("SELECT * FROM employees WHERE email = ?", [email], (err, existingUser) => {
+        if (err) {
+            console.error('❌ Error en base de datos:', err);
+            return res.status(500).json({ error: 'Error del servidor' });
+        }
+
+        if (existingUser) {
+            console.error('❌ Usuario ya existe');
+            return res.status(409).json({ error: 'Ya existe una cuenta con este correo electrónico' });
+        }
+
+        // Hashear contraseña
+        const hashedPassword = bcrypt.hashSync(password, 10);
+
+        // Insertar nuevo empleado con rol 'employee' por defecto
+        const sql = `
+            INSERT INTO employees (name, email, password, position, role, created_at) 
+            VALUES (?, ?, ?, ?, 'employee', datetime('now'))
+        `;
+        
+        database.run(sql, [name, email, hashedPassword, position || 'Empleado'], function(err) {
+            if (err) {
+                console.error('❌ Error creando usuario:', err);
+                return res.status(500).json({ error: 'Error al crear la cuenta' });
+            }
+
+            console.log('✅ Usuario creado exitosamente:', {
+                id: this.lastID,
+                name: name,
+                email: email,
+                role: 'employee'
+            });
+
+            // Generar token para el nuevo usuario
+            const token = jwt.sign(
+                { id: this.lastID, email: email, role: 'employee', name: name },
+                JWT_SECRET,
+                { expiresIn: '24h' }
+            );
+
+            res.status(201).json({
+                message: 'Cuenta creada exitosamente',
+                user: {
+                    id: this.lastID,
+                    name: name,
+                    email: email,
+                    position: position || 'Empleado',
+                    role: 'employee'
+                },
+                token: token
+            });
+        });
+    });
+});
+
 app.post('/api/login', (req, res) => {
     console.log('🚀 Petición de login recibida');
     console.log('📧 Email:', req.body.email);
@@ -355,6 +437,7 @@ app.post('/api/attendance', authenticateToken, upload.single('photo'), (req, res
 
 app.get('/api/attendance', authenticateToken, (req, res) => {
     const employeeId = req.user.id;
+    console.log('📡 Petición a /api/attendance desde usuario:', req.user.email, 'ID:', employeeId, 'rol:', req.user.role);
     
     database.all(`
         SELECT a.*, e.name as employee_name 
@@ -364,8 +447,11 @@ app.get('/api/attendance', authenticateToken, (req, res) => {
         ORDER BY a.timestamp DESC
     `, [employeeId], (err, rows) => {
         if (err) {
+            console.error('❌ Error en /api/attendance:', err);
             return res.status(500).json({ error: 'Error al obtener registros' });
         }
+        console.log('📋 Registros encontrados para usuario', req.user.email, ':', rows.length);
+        console.log('📋 Datos:', rows);
         res.json(rows);
     });
 });

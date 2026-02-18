@@ -11,7 +11,7 @@
     <meta name="theme-color" content="#2563eb">
     
     <!-- HTTPS y permisos móviles -->
-    <meta http-equiv="Content-Security-Policy" content="camera *; geolocation *; microphone *">
+    <meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval'; media-src *; img-src * data:; camera 'self'; geolocation 'self'; microphone 'self';">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -1596,6 +1596,12 @@
         console.log('✅ loadAllAttendance definida desde HTML');
     </script>
     
-    <script src="app.js?v=2026-production-complete-system"></script>
+    <script>
+        // Forzar recarga completa con timestamp único
+        const timestamp = new Date().getTime();
+        const script = document.createElement('script');
+        script.src = `app.js?v=${timestamp}-localhost-fixed`;
+        document.head.appendChild(script);
+    </script>
 </body>
 </html>

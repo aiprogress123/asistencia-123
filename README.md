@@ -193,7 +193,7 @@ Sistema web de control de asistencia para empleados con registro fotográfico y 
 
 ### 🌐 **Configuración de Red**
 - **Puerto:** 3000 (configurable en variables de entorno)
-- **Base de datos:** SQLite (archivo progress_net_assistance.database)
+- **Base de datos:** SQLite (archivo progress.db)
 - **Archivos estáticos:** Carpeta `public/`
 - **Logs:** Consola del servidor
 

@@ -100,6 +100,35 @@ app.get('/api/admin/employees', (req, res) => {
     }
 });
 
+// Ruta para obtener registros del usuario actual
+app.get('/api/attendance', (req, res) => {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    
+    if (!token) {
+        return res.status(401).json({ error: 'Token requerido' });
+    }
+    
+    try {
+        const decoded = jwt.verify(token, JWT_SECRET);
+        const employeeId = decoded.id;
+        
+        db.all(`
+            SELECT a.*, u.name as employee_name 
+            FROM attendance a 
+            LEFT JOIN users u ON a.employee_id = u.id 
+            WHERE a.employee_id = ? 
+            ORDER BY a.timestamp DESC
+        `, [employeeId], (err, rows) => {
+            if (err) {
+                return res.status(500).json({ error: 'Error al obtener registros' });
+            }
+            res.json(rows);
+        });
+    } catch (error) {
+        return res.status(401).json({ error: 'Token inválido' });
+    }
+});
+
 app.get('/api/admin/attendance', (req, res) => {
     const token = req.headers.authorization?.replace('Bearer ', '');
     

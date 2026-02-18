@@ -18,22 +18,11 @@ const getApiBase = () => {
     console.log('🔍 Configurando API_BASE...');
     console.log('🌐 Hostname:', window.location.hostname);
     
-    // Si estamos en Vercel producción
-    if (window.location.hostname.includes('vercel.app')) {
-        console.log('📍 Entorno Vercel detectado');
-        return 'http://localhost:3000/api'; // Backend local
-    }
-    
-    // Si estamos en desarrollo local
-    if (window.location.hostname === 'localhost' || 
-        window.location.hostname === '127.0.0.1') {
-        console.log('📍 Entorno local detectado');
-        return 'http://localhost:3000/api';
-    }
-    
-    // Para cualquier otro entorno
-    console.log('📍 Entorno producción detectado');
-    return 'http://localhost:3000/api'; // Temporal: backend local
+    // Para producción, usar localhost con modo混合
+    const API_BASE = window.location.hostname === 'localhost' 
+        ? 'http://localhost:3000/api'  // Mantener HTTP para desarrollo
+        : 'http://localhost:3000/api';  // Para producción también usar localhost temporalmente
+    return API_BASE;
 };
 
 const API_BASE = getApiBase();
@@ -124,18 +113,28 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
 });
 
 function loginSuccess(user, token) {
+    console.log('🔐 LoginSuccess - Usuario recibido:', user);
+    console.log('🔑 Token recibido:', token ? 'existe' : 'no existe');
+    
     currentUser = user;
     localStorage.setItem('progressToken', token);
     localStorage.setItem('progressUser', JSON.stringify(user));
+    
+    // Verificar que se guardó correctamente
+    const savedUser = JSON.parse(localStorage.getItem('progressUser'));
+    console.log('💾 Usuario guardado en localStorage:', savedUser);
+    console.log('🔑 Rol guardado:', savedUser?.role);
     
     document.getElementById('loginScreen').classList.add('hidden');
     document.getElementById('mainApp').classList.remove('hidden');
     
     if (user.role === 'admin') {
+        console.log('👑 Mostrando vista de administrador');
         document.getElementById('adminView').classList.remove('hidden');
         document.getElementById('employeeView').classList.add('hidden');
         loadEmployees();
     } else {
+        console.log('👷 Mostrando vista de empleado');
         document.getElementById('employeeView').classList.remove('hidden');
         document.getElementById('adminView').classList.add('hidden');
         loadTodayAttendance();
@@ -449,6 +448,8 @@ window.showAllAttendance = showAllAttendance;
 window.recordAttendance = recordAttendance;
 window.capturePhoto = capturePhoto;
 window.showAdminExitSelection = showAdminExitSelection;
+window.setupAutomaticReminders = setupAutomaticReminders;
+window.clearExistingReminders = clearExistingReminders;
 
 console.log('✅ Funciones registradas globalmente');
 
@@ -619,9 +620,14 @@ function processAdminExit() {
 }
 
 function displayAttendanceRecords(records) {
+    console.log('🎨 displayAttendanceRecords - Registros recibidos:', records.length);
+    console.log('📊 Primeros 3 registros:', records.slice(0, 3));
+    
     const container = document.getElementById('attendanceRecords');
+    console.log('📦 Container encontrado:', container ? 'sí' : 'no');
     
     if (records.length === 0) {
+        console.log('📭 No hay registros, mostrando mensaje vacío');
         container.innerHTML = '<p class="text-muted">No hay registros de asistencia</p>';
         return;
     }
@@ -629,6 +635,7 @@ function displayAttendanceRecords(records) {
     // Obtener el rol del usuario actual
     const currentUserAttendance = JSON.parse(localStorage.getItem('progressUser'));
     const userRole = currentUserAttendance ? currentUserAttendance.role : 'employee';
+    console.log('👤 Rol del usuario para mostrar:', userRole);
 
     // Agrupar registros por día para mostrar resumen de horas
     const dailyRecords = {};
@@ -649,6 +656,8 @@ function displayAttendanceRecords(records) {
         
         dailyRecords[dateKey].records.push(record);
     });
+
+    console.log('📅 Registros agrupados por día:', Object.keys(dailyRecords).length, 'días');
 
     // Calcular horas por día
     Object.values(dailyRecords).forEach(day => {
@@ -734,7 +743,11 @@ function displayAttendanceRecords(records) {
         `;
     });
 
+    console.log('🎨 HTML generado, longitud:', html.length);
+    console.log('🎨 Primeros 200 caracteres del HTML:', html.substring(0, 200));
+    
     container.innerHTML = html;
+    console.log('🎨 HTML asignado al container');
 }
 
 async function loadMyAttendance() {
@@ -839,6 +852,77 @@ function createNotification(title, body) {
     }, 10000);
 }
 
+function capturePhoto() {
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const context = canvas.getContext('2d');
+    
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    context.drawImage(video, 0, 0);
+    
+    // Convertir a blob directamente
+    return new Promise((resolve) => {
+        canvas.toBlob((blob) => {
+            photoData = canvas.toDataURL('image/jpeg');
+            resolve(blob);
+        }, 'image/jpeg');
+    });
+}
+
+// Función para configurar recordatorios automáticos
+function setupAutomaticReminders(entryTime) {
+    // Limpiar recordatorios existentes
+    clearExistingReminders();
+    
+    const now = new Date();
+    const entryHour = entryTime.getHours();
+    
+    // Configurar recordatorio para fin de jornada (6:00 PM)
+    const endOfDayReminder = new Date(now);
+    endOfDayReminder.setHours(18, 0, 0, 0);
+    
+    if (endOfDayReminder > now) {
+        const endOfDayTimeout = endOfDayReminder - now;
+        setTimeout(() => {
+            sendBrowserNotification('Fin de Jornada', 'No olvides registrar tu salida');
+        }, endOfDayTimeout);
+    }
+    
+    // Configurar recordatorio tardío (8:00 PM)
+    const lateReminder = new Date(now);
+    lateReminder.setHours(20, 0, 0, 0);
+    
+    if (lateReminder > now) {
+        const lateTimeout = lateReminder - now;
+        setTimeout(() => {
+            showCustomAlert(
+                '🚨 RECORDATORIO URGENTE', 
+                '¡Aún tienes tu sesión de trabajo abierta!<br><br>Por favor registra tu salida inmediatamente para evitar problemas con tus horas extras.', 
+                'danger'
+            );
+            sendBrowserNotification('Urgente: Sesión Abierta', 'Registra tu salida ahora');
+        }, lateTimeout);
+    }
+    
+    // Configurar recordatorios periódicos (cada 60 minutos después de las 9 horas)
+    const hoursSinceEntry = (now - entryTime) / (1000 * 60 * 60);
+    if (hoursSinceEntry > 9) {
+        setInterval(() => {
+            sendBrowserNotification('Sesión Abierta', 'Recuerda registrar tu salida');
+        }, 60 * 60 * 1000); // Cada 60 minutos
+    }
+}
+
+// Función para limpiar recordatorios existentes
+function clearExistingReminders() {
+    // Limpiar timeouts y intervals existentes
+    for (let i = 1; i < 99999; i++) {
+        clearTimeout(i);
+        clearInterval(i);
+    }
+}
+
 function playNotificationSound() {
     // Crear un sonido simple usando Web Audio API
     const audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -860,6 +944,7 @@ async function recordAttendance(type) {
     console.log('🚀 Iniciando registro de asistencia:', type);
     console.log('📍 Ubicación actual:', currentLocation);
     console.log('📷 Estado de cámara:', cameraStream ? 'activa' : 'inactiva');
+    console.log('🔑 Token disponible:', localStorage.getItem('progressToken') ? 'sí' : 'no');
     
     if (!currentLocation) {
         console.error('❌ Error: No hay ubicación');
@@ -956,6 +1041,11 @@ async function loadAllRecordsDirectly() {
     console.log('🔄 Cargando todos los registros...');
     const token = localStorage.getItem('progressToken');
     
+    // Verificar rol del usuario actual
+    const currentUser = JSON.parse(localStorage.getItem('progressUser'));
+    console.log('👤 Usuario actual:', currentUser);
+    console.log('🔑 Rol del usuario:', currentUser?.role);
+    
     if (!token) {
         console.error('❌ No hay token en localStorage');
         showCustomAlert('❌ Error', 'No hay sesión activa. Por favor inicia sesión.', 'danger');
@@ -965,7 +1055,7 @@ async function loadAllRecordsDirectly() {
     console.log('🔑 Token encontrado:', token.substring(0, 20) + '...');
     
     try {
-        const response = await fetch(`${API_BASE}/attendance`, {
+        const response = await fetch(`${API_BASE}/admin/attendance`, {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
@@ -977,7 +1067,12 @@ async function loadAllRecordsDirectly() {
         if (response.ok) {
             const records = await response.json();
             console.log('📋 Registros recibidos:', records.length);
+            console.log('📊 Tipo de datos:', typeof records);
+            console.log('📊 ¿Es array?:', Array.isArray(records));
+            console.log('📊 Primer registro completo:', records[0]);
+            console.log('🎨 A punto de llamar a displayAttendanceRecords con', records.length, 'registros');
             displayAttendanceRecords(records);
+            console.log('🎨 displayAttendanceRecords llamada correctamente');
         } else {
             const errorText = await response.text();
             console.error('❌ Error del servidor:', errorText);

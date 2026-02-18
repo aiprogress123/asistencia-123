@@ -663,7 +663,61 @@
                 <button type="submit" class="btn btn-progress w-100">
                     <i class="fas fa-sign-in-alt me-2"></i>Iniciar Sesión
                 </button>
+                <div class="text-center mt-3">
+                    <button type="button" class="btn btn-outline-light btn-sm" onclick="showRegisterModal()">
+                        <i class="fas fa-user-plus me-2"></i>Registrarse como Empleado
+                    </button>
+                </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Registration Modal -->
+    <div class="modal fade" id="registerModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-user-plus me-2"></i>Registro de Empleado
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="registerForm">
+                        <div class="mb-3">
+                            <label for="regName" class="form-label">Nombre Completo</label>
+                            <input type="text" class="form-control" id="regName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="regEmail" class="form-label">Correo Electrónico</label>
+                            <input type="email" class="form-control" id="regEmail" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="regPassword" class="form-label">Contraseña</label>
+                            <input type="password" class="form-control" id="regPassword" required>
+                            <small class="text-muted">Mínimo 6 caracteres</small>
+                        </div>
+                        <div class="mb-3">
+                            <label for="regConfirmPassword" class="form-label">Confirmar Contraseña</label>
+                            <input type="password" class="form-control" id="regConfirmPassword" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="regPosition" class="form-label">Puesto</label>
+                            <input type="text" class="form-control" id="regPosition" placeholder="Ej: Técnico, Administrador, etc.">
+                        </div>
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Al registrarte, tu cuenta será creada con rol de empleado. Un administrador deberá aprobar tu acceso.
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-progress" onclick="registerEmployee()">
+                        <i class="fas fa-user-plus me-2"></i>Registrarse
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 
