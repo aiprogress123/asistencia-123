@@ -13,21 +13,57 @@ let availableCameras = [];
 // Configuración de zona horaria para Colombia
 const TIMEZONE = 'America/Bogota';
 
+// Verificar rol al cargar la página
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🔄 DOM cargado, verificando rol...');
+    const savedUser = JSON.parse(localStorage.getItem('progressUser'));
+    console.log('👤 Usuario en localStorage al cargar:', savedUser);
+    console.log('🔑 Rol en localStorage al cargar:', savedUser?.role);
+    
+    // Actualizar userInfo si el usuario está logueado
+    if (savedUser && document.getElementById('mainApp').classList.contains('hidden') === false) {
+        const userInfoElement = document.getElementById('userInfo');
+        if (userInfoElement) {
+            userInfoElement.innerHTML = `
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-user-circle me-2" style="color: #fff; font-size: 1.2rem;"></i>
+                    <span style="color: #fff; font-weight: 500;">${savedUser.name}</span>
+                    <span class="badge ms-2" style="background-color: rgba(255,255,255,0.2); color: #fff;">${getRoleDisplayName(savedUser.role)}</span>
+                </div>
+            `;
+            console.log('🎨 UserInfo actualizado con rol:', savedUser.role);
+        }
+    }
+});
+
 // API_BASE para producción con fallback
 const getApiBase = () => {
     console.log('🔍 Configurando API_BASE...');
     console.log('🌐 Hostname:', window.location.hostname);
+    console.log('📅 Versión del frontend: railway-backend');
     
-    // Para producción, usar localhost con modo混合
+    // Para producción, usar backend desplegado en Railway
     const API_BASE = window.location.hostname === 'localhost' 
         ? 'http://localhost:3000/api'  // Mantener HTTP para desarrollo
-        : 'http://localhost:3000/api';  // Para producción también usar localhost temporalmente
+        : 'https://progress-assistance-backend-production.up.railway.app/api';  // Backend en Railway
     return API_BASE;
 };
 
 const API_BASE = getApiBase();
 
 console.log('🌐 API_BASE configurada:', API_BASE);
+
+// Función para mostrar nombres de roles en español
+function getRoleDisplayName(role) {
+    const roleNames = {
+        'admin': 'Administrador',
+        'coordinator': 'Coordinador',
+        'jefe': 'Jefe',
+        'employee': 'Empleado',
+        'van': 'Van'
+    };
+    return roleNames[role] || role;
+}
 
 // Función para validar email
 function validateEmail(email) {
@@ -125,6 +161,18 @@ function loginSuccess(user, token) {
     console.log('💾 Usuario guardado en localStorage:', savedUser);
     console.log('🔑 Rol guardado:', savedUser?.role);
     
+    // Mostrar nombre del usuario en la esquina superior derecha
+    const userInfoElement = document.getElementById('userInfo');
+    if (userInfoElement) {
+        userInfoElement.innerHTML = `
+            <div class="d-flex align-items-center">
+                <i class="fas fa-user-circle me-2" style="color: #fff; font-size: 1.2rem;"></i>
+                <span style="color: #fff; font-weight: 500;">${user.name}</span>
+                <span class="badge ms-2" style="background-color: rgba(255,255,255,0.2); color: #fff;">${getRoleDisplayName(user.role)}</span>
+            </div>
+        `;
+    }
+    
     document.getElementById('loginScreen').classList.add('hidden');
     document.getElementById('mainApp').classList.remove('hidden');
     
@@ -146,6 +194,12 @@ function logout() {
     localStorage.removeItem('progressUser');
     currentUser = null;
     
+    // Limpiar userInfo
+    const userInfoElement = document.getElementById('userInfo');
+    if (userInfoElement) {
+        userInfoElement.innerHTML = '';
+    }
+    
     document.getElementById('loginScreen').classList.remove('hidden');
     document.getElementById('mainApp').classList.add('hidden');
 }
@@ -153,10 +207,14 @@ function logout() {
 // Funciones principales
 async function loadEmployees() {
     console.log('🔄 Iniciando carga de empleados...');
+    
+    const token = localStorage.getItem('progressToken');
+    console.log('🔑 Token disponible:', token ? 'sí' : 'no');
+    
     try {
         const response = await fetch(`${API_BASE}/admin/employees`, {
             headers: {
-                'Authorization': `Bearer ${localStorage.getItem('progressToken')}`
+                'Authorization': `Bearer ${token}`
             }
         });
         
@@ -168,9 +226,12 @@ async function loadEmployees() {
         if (response.ok) {
             const employees = await response.json();
             console.log('👥 Empleados recibidos:', employees.length, 'empleados');
+            console.log('📋 Datos de empleados:', employees);
             displayEmployees(employees);
         } else {
             console.error('❌ Error en respuesta de empleados:', response.status, response.statusText);
+            const error = await response.text();
+            console.error('❌ Error detallado:', error);
         }
     } catch (error) {
         console.error('Error cargando empleados:', error);
@@ -215,13 +276,13 @@ function displayEmployees(employees) {
                     </div>
                 </td>
                 <td>
-                    <span class="badge bg-${emp.role === 'jefe' ? 'danger' : emp.role === 'coordinator' ? 'warning' : emp.role === 'ban' ? 'dark' : 'primary'}" id="${roleId}">${emp.role === 'jefe' ? 'Jefe' : emp.role === 'coordinator' ? 'Coordinador' : emp.role === 'ban' ? 'Van' : 'Empleado'}</span>
+                    <span class="badge bg-${emp.role === 'admin' ? 'danger' : emp.role === 'coordinator' ? 'warning' : emp.role === 'van' ? 'dark' : 'primary'}" id="${roleId}">${emp.role === 'admin' ? 'administrador' : emp.role === 'coordinator' ? 'coordinador' : emp.role === 'van' ? 'van' : 'empleado'}</span>
                     <div class="role-actions" id="${roleActionsId}" style="display: none;">
                         <select class="form-select form-select-sm" id="${roleSelectId}">
-                            <option value="employee" ${emp.role === 'employee' ? 'selected' : ''}>Empleado</option>
-                            <option value="coordinator" ${emp.role === 'coordinator' ? 'selected' : ''}>Coordinador</option>
-                            <option value="jefe" ${emp.role === 'jefe' ? 'selected' : ''}>Jefe</option>
-                            <option value="ban" ${emp.role === 'ban' ? 'selected' : ''}>Van</option>
+                            <option value="employee" ${emp.role === 'employee' ? 'selected' : ''}>empleado</option>
+                            <option value="coordinator" ${emp.role === 'coordinator' ? 'selected' : ''}>coordinador</option>
+                            <option value="admin" ${emp.role === 'admin' ? 'selected' : ''}>administrador</option>
+                            <option value="van" ${emp.role === 'van' ? 'selected' : ''}>van</option>
                         </select>
                         <button class="btn btn-sm btn-success" onclick="updateRole('${emp.id}')">
                             <i class="fas fa-check"></i>
@@ -620,14 +681,22 @@ function processAdminExit() {
 }
 
 function displayAttendanceRecords(records) {
-    console.log('🎨 displayAttendanceRecords - Registros recibidos:', records.length);
-    console.log('📊 Primeros 3 registros:', records.slice(0, 3));
+    console.log(' displayAttendanceRecords - Registros recibidos:', records.length);
+    console.log(' Primeros 3 registros:', records.slice(0, 3));
     
     const container = document.getElementById('attendanceRecords');
-    console.log('📦 Container encontrado:', container ? 'sí' : 'no');
+    console.log(' Container encontrado:', !!container);
+    console.log(' Container ID:', container?.id);
+    console.log(' Container classes:', container?.className);
+    console.log(' Container visible:', container?.offsetParent !== null);
+    console.log(' Container display:', window.getComputedStyle(container)?.display);
+    console.log(' Tiene clase hidden?:', container?.classList?.contains('hidden'));
+    console.log(' Tiene clase loading?:', container?.classList?.contains('loading'));
+    console.log(' Container position:', container?.style?.position);
+    console.log(' Container parent:', container?.parentElement?.tagName);
     
     if (records.length === 0) {
-        console.log('📭 No hay registros, mostrando mensaje vacío');
+        console.log(' No hay registros, mostrando mensaje vacío');
         container.innerHTML = '<p class="text-muted">No hay registros de asistencia</p>';
         return;
     }
@@ -635,7 +704,8 @@ function displayAttendanceRecords(records) {
     // Obtener el rol del usuario actual
     const currentUserAttendance = JSON.parse(localStorage.getItem('progressUser'));
     const userRole = currentUserAttendance ? currentUserAttendance.role : 'employee';
-    console.log('👤 Rol del usuario para mostrar:', userRole);
+    console.log('👤 Rol del usuario EN displayAttendanceRecords:', userRole);
+    console.log('👤 Usuario completo EN displayAttendanceRecords:', currentUserAttendance);
 
     // Agrupar registros por día para mostrar resumen de horas
     const dailyRecords = {};
@@ -746,8 +816,48 @@ function displayAttendanceRecords(records) {
     console.log('🎨 HTML generado, longitud:', html.length);
     console.log('🎨 Primeros 200 caracteres del HTML:', html.substring(0, 200));
     
-    container.innerHTML = html;
-    console.log('🎨 HTML asignado al container');
+    if (container) {
+        container.innerHTML = html;
+        console.log('🎨 HTML asignado al container');
+        console.log('🎨 Container después de asignar:', container.innerHTML.length, 'caracteres');
+        console.log('🎨 Container visible después:', container.offsetParent !== null);
+        
+        // Remover clase loading después de cargar los datos
+        container.classList.remove('loading');
+        console.log('🎨 Clase loading removida');
+        
+        // Test: Mostrar contenido simple para verificar visibilidad
+        setTimeout(() => {
+            console.log('🧪 Test - Container visible después de timeout:', container.offsetParent !== null);
+            console.log('🧪 Test - Container classes después de timeout:', container.className);
+            console.log('🧪 Test - Container display después de timeout:', window.getComputedStyle(container).display);
+            console.log('🧪 Test - Container parent:', container.parentElement?.tagName);
+            console.log('🧪 Test - Container parent visible:', container.parentElement?.offsetParent !== null);
+            console.log('🧪 Test - Container parent display:', window.getComputedStyle(container.parentElement)?.display);
+            
+            // Si sigue invisible, forzar visibilidad
+            if (container.offsetParent === null) {
+                console.log('🚨 Forzando visibilidad del container');
+                container.style.display = 'block';
+                container.style.visibility = 'visible';
+                container.style.opacity = '1';
+                container.style.position = 'relative';
+                
+                // Revisar padres
+                let parent = container.parentElement;
+                while (parent) {
+                    console.log('🔍 Revisando padre:', parent.tagName, parent.className, window.getComputedStyle(parent).display);
+                    if (window.getComputedStyle(parent).display === 'none') {
+                        console.log('🚨 Padre oculto, forzando visibilidad');
+                        parent.style.display = 'block';
+                    }
+                    parent = parent.parentElement;
+                }
+            }
+        }, 100);
+    } else {
+        console.error('❌ Container no encontrado');
+    }
 }
 
 async function loadMyAttendance() {
@@ -1043,8 +1153,8 @@ async function loadAllRecordsDirectly() {
     
     // Verificar rol del usuario actual
     const currentUser = JSON.parse(localStorage.getItem('progressUser'));
-    console.log('👤 Usuario actual:', currentUser);
-    console.log('🔑 Rol del usuario:', currentUser?.role);
+    console.log('👤 Usuario actual EN loadAllRecordsDirectly:', currentUser);
+    console.log('🔑 Rol del usuario EN loadAllRecordsDirectly:', currentUser?.role);
     
     if (!token) {
         console.error('❌ No hay token en localStorage');
@@ -1063,6 +1173,7 @@ async function loadAllRecordsDirectly() {
         
         console.log('📡 Respuesta status:', response.status);
         console.log('📡 Respuesta headers:', [...response.headers.entries()]);
+        console.log('📡 Respuesta ok:', response.ok);
         
         if (response.ok) {
             const records = await response.json();
@@ -1268,20 +1379,27 @@ async function addEmployee() {
     const password = document.getElementById('newEmployeePassword')?.value;
     const position = document.getElementById('newEmployeePosition')?.value;
     
+    console.log('👤 Datos del formulario addEmployee:', { name, email, role, password, position });
+    
     if (!name || !email || !role || !password || !position) {
         showCustomAlert('❌ Error', 'Todos los campos son obligatorios', 'danger');
         return;
     }
     
     try {
+        const token = localStorage.getItem('progressToken');
+        console.log('🔑 Token disponible:', token ? 'sí' : 'no');
+        
         const response = await fetch(`${API_BASE}/admin/employees`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('progressToken')}`
+                'Authorization': `Bearer ${token}`
             },
             body: JSON.stringify({ name, email, role, password, position })
         });
+        
+        console.log('📡 Respuesta del servidor:', response.status, response.statusText);
         
         if (response.ok) {
             showCustomAlert('✅ Éxito', 'Empleado agregado correctamente', 'success');
@@ -1298,24 +1416,44 @@ async function addEmployee() {
 }
 
 async function editEmployee(id) {
+    console.log('🔄 Iniciando edición de empleado:', id);
+    
     try {
+        const token = localStorage.getItem('progressToken');
+        console.log('🔑 Token disponible:', token ? 'sí' : 'no');
+        
         const response = await fetch(`${API_BASE}/admin/employees/${id}`, {
             headers: {
-                'Authorization': `Bearer ${localStorage.getItem('progressToken')}`
+                'Authorization': `Bearer ${token}`
             }
         });
         
+        console.log('📡 Respuesta del servidor:', response.status, response.statusText);
+        
         if (response.ok) {
             const employee = await response.json();
+            console.log('👤 Datos del empleado recibidos:', employee);
+            
             document.getElementById('editEmployeeId').value = employee.id;
             document.getElementById('editEmployeeName').value = employee.name;
             document.getElementById('editEmployeeEmail').value = employee.email;
             document.getElementById('editEmployeeRole').value = employee.role;
+            
+            console.log('📝 Formulario llenado con:', {
+                id: employee.id,
+                name: employee.name,
+                email: employee.email,
+                role: employee.role
+            });
+            
             openModal('editEmployeeModal');
+        } else {
+            console.error('❌ Error al cargar empleado:', response.status);
+            showCustomAlert('❌ Error', 'No se pudo cargar el empleado', 'danger');
         }
     } catch (error) {
         console.error('Error cargando empleado:', error);
-        showCustomAlert('❌ Error', 'No se pudo cargar el empleado', 'danger');
+        showCustomAlert('❌ Error', 'Error al cargar empleado', 'danger');
     }
 }
 

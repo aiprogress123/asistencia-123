@@ -1195,7 +1195,7 @@
             <!-- Header -->
             <div class="header-section">
                 <div class="row align-items-center">
-                    <div class="col-md-6 d-flex align-items-center">
+                    <div class="col-md-6 d-flex justify-content-center align-items-center">
                         <img src="assets/logo.png" alt="Progress Net Logo" style="width: 120px; height: 120px; filter: drop-shadow(0 0 10px var(--progress-teal)); border-radius: 50%; object-fit: cover;">
                         <div class="text-center flex-grow-1">
                             <h2 class="mb-0 text-white">
@@ -1205,14 +1205,16 @@
                         </div>
                     </div>
                     <div class="col-md-6 text-md-end mt-3 mt-md-0">
-                        <span id="userInfo" class="me-3"></span>
-                        <div class="mt-2">
-                            <button class="btn btn-warning btn-sm me-2" onclick="showChangePassword()">
-                                <i class="fas fa-key me-1"></i>Cambiar Contraseña
-                            </button>
-                            <button class="btn btn-danger btn-sm" onclick="logout()" style="background-color: #dc3545; border-color: #dc3545; color: #000000;">
-                                <i class="fas fa-sign-out-alt me-1" style="color: #000000;"></i>Salir
-                            </button>
+                        <div class="d-flex flex-column align-items-end">
+                            <span id="userInfo" class="mb-2"></span>
+                            <div class="d-flex flex-column flex-md-row">
+                                <button class="btn btn-warning btn-sm me-2 mb-2 mb-md-0" onclick="showChangePassword()">
+                                    <i class="fas fa-key me-1"></i>Cambiar Contraseña
+                                </button>
+                                <button class="btn btn-danger btn-sm" onclick="logout()" style="background-color: #dc3545; border-color: #dc3545; color: #000000;">
+                                    <i class="fas fa-sign-out-alt me-1" style="color: #000000;"></i>Salir
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1414,10 +1416,10 @@
                                     <div class="mb-3">
                                         <label for="newEmployeeRole" class="form-label">Rol</label>
                                         <select class="form-control" id="newEmployeeRole" required>
-                                            <option value="employee">Empleado</option>
-                                            <option value="coordinator">Coordinador</option>
-                                            <option value="jefe">Jefe</option>
-                                            <option value="ban">Van</option>
+                                            <option value="employee">empleado</option>
+                                            <option value="coordinator">coordinador</option>
+                                            <option value="admin">administrador</option>
+                                            <option value="van">van</option>
                                         </select>
                                     </div>
                                     <div class="modal-footer">
@@ -1454,10 +1456,10 @@
                         <div class="mb-3">
                             <label for="editEmployeeRole" class="form-label">Rol</label>
                             <select class="form-control" id="editEmployeeRole" required>
-                                <option value="employee">Empleado</option>
-                                <option value="coordinator">Coordinador</option>
-                                <option value="ban">Van</option>
-                                <option value="admin">Administrador</option>
+                                <option value="employee">empleado</option>
+                                <option value="coordinator">coordinador</option>
+                                <option value="van">van</option>
+                                <option value="admin">administrador</option>
                             </select>
                         </div>
                         <div class="modal-footer">
@@ -1600,7 +1602,7 @@
         // Forzar recarga completa con timestamp único
         const timestamp = new Date().getTime();
         const script = document.createElement('script');
-        script.src = `app.js?v=${timestamp}-localhost-fixed`;
+        script.src = `app.js?v=${timestamp}-role-fixed`;
         document.head.appendChild(script);
     </script>
 </body>

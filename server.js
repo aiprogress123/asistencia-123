@@ -477,6 +477,85 @@ app.get('/api/admin/employees', authenticateToken, (req, res) => {
     });
 });
 
+// Obtener un empleado específico
+app.get('/api/admin/employees/:id', authenticateToken, (req, res) => {
+    console.log('📡 Petición a /api/admin/employees/:id desde usuario:', req.user.email, 'rol:', req.user.role);
+    console.log('🆔 ID solicitado:', req.params.id);
+    
+    if (req.user.role !== 'admin') {
+        console.log('❌ Usuario no autorizado:', req.user.role);
+        return res.status(403).json({ error: 'No autorizado' });
+    }
+
+    const employeeId = req.params.id;
+    
+    database.get("SELECT id, name, email, position, role, created_at FROM employees WHERE id = ?", [employeeId], (err, row) => {
+        if (err) {
+            console.error('❌ Error en base de datos:', err);
+            return res.status(500).json({ error: 'Error al obtener empleado' });
+        }
+        
+        if (!row) {
+            console.log('❌ Empleado no encontrado con ID:', employeeId);
+            return res.status(404).json({ error: 'Empleado no encontrado' });
+        }
+        
+        console.log('👤 Empleado encontrado:', row);
+        res.json(row);
+    });
+});
+
+// Actualizar un empleado completo
+app.put('/api/admin/employees/:id', authenticateToken, express.json(), (req, res) => {
+    console.log('📝 Petición PUT a /api/admin/employees/:id desde usuario:', req.user.email, 'rol:', req.user.role);
+    console.log('🆔 ID a actualizar:', req.params.id);
+    console.log('📋 Datos recibidos:', req.body);
+    
+    if (req.user.role !== 'admin') {
+        console.log('❌ Usuario no autorizado:', req.user.role);
+        return res.status(403).json({ error: 'No autorizado' });
+    }
+
+    const employeeId = req.params.id;
+    const { name, email, role } = req.body;
+    
+    if (!name || !email || !role) {
+        console.error('❌ Datos incompletos:', { name: !!name, email: !!email, role: !!role });
+        return res.status(400).json({ error: 'Nombre, email y rol son requeridos' });
+    }
+    
+    database.run(
+        "UPDATE employees SET name = ?, email = ?, role = ? WHERE id = ?",
+        [name, email, role, employeeId],
+        function(err) {
+            if (err) {
+                console.error('❌ Error actualizando empleado:', err);
+                return res.status(500).json({ error: 'Error al actualizar empleado' });
+            }
+            
+            if (this.changes === 0) {
+                console.log('❌ No se encontró empleado con ID:', employeeId);
+                return res.status(404).json({ error: 'Empleado no encontrado' });
+            }
+            
+            console.log('✅ Empleado actualizado exitosamente:', {
+                id: employeeId,
+                name: name,
+                email: email,
+                role: role
+            });
+            
+            res.json({
+                message: 'Empleado actualizado correctamente',
+                id: employeeId,
+                name: name,
+                email: email,
+                role: role
+            });
+        }
+    );
+});
+
 app.get('/api/admin/attendance', authenticateToken, (req, res) => {
     console.log('📡 Petición a /api/admin/attendance desde usuario:', req.user.email, 'rol:', req.user.role);
     
@@ -523,7 +602,15 @@ app.post('/api/admin/employees', authenticateToken, (req, res) => {
         return res.status(403).json({ error: 'No autorizado' });
     }
 
-    const { name, email, password, position } = req.body;
+    const { name, email, password, position, role } = req.body;
+    
+    console.log('📋 Datos completos recibidos:', {
+        name: name,
+        email: email,
+        position: position,
+        role: role,
+        password: password ? 'proporcionada' : 'no proporcionada'
+    });
     
     // Validaciones
     if (!name || !email || !password) {
@@ -540,9 +627,9 @@ app.post('/api/admin/employees', authenticateToken, (req, res) => {
     const hashedPassword = bcrypt.hashSync(password, 10);
 
     database.run(`
-        INSERT INTO employees (name, email, password, position) 
-        VALUES (?, ?, ?, ?)
-    `, [name, email, hashedPassword, position || 'Jefe'], function(err) {
+        INSERT INTO employees (name, email, password, position, role) 
+        VALUES (?, ?, ?, ?, ?)
+    `, [name, email, hashedPassword, position || 'Jefe', req.body.role || 'employee'], function(err) {
         if (err) {
             console.error('❌ Error al crear empleado:', err);
             
