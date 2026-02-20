@@ -2,11 +2,11 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-# Copiar package files
-COPY package*.json ./
+# Copiar package.json específico para Railway
+COPY package-railway.json package.json
 
 # Instalar dependencias
-RUN npm ci --only=production
+RUN npm install
 
 # Copiar código fuente
 COPY . .
@@ -22,4 +22,4 @@ ENV NODE_ENV=production
 ENV PORT=3000
 
 # Iniciar aplicación
-CMD ["npm", "start"]
+CMD ["node", "server-railway.js"]

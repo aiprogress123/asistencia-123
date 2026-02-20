@@ -1,0 +1,11 @@
+[build]
+builder = "nixpack"
+
+[deploy]
+startCommand = "npm start"
+restartPolicyType = "restart"
+restartPolicyMaxRetries = 10
+
+[env]
+NODE_ENV = "production"
+PORT = "3000"

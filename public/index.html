@@ -1251,13 +1251,20 @@
                         </button>
                     </div>
 
-                    <div class="d-flex justify-content-center flex-wrap">
+                    <div class="d-flex justify-content-center flex-wrap" id="attendanceButtons">
                         <button class="btn-action btn-entry" onclick="recordAttendance('entry')">
                             <i class="fas fa-sign-in-alt me-2"></i>Registrar Entrada
                         </button>
                         <button class="btn-action btn-exit" onclick="recordAttendance('exit')">
                             <i class="fas fa-sign-out-alt me-2"></i>Registrar Salida
                         </button>
+                    </div>
+                    
+                    <div class="d-flex justify-content-center flex-wrap" id="adminMessage" style="display: none;">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Como administrador, puedes ver y gestionar los registros de todos los empleados.
+                        </div>
                     </div>
                 </div>
 
@@ -1286,7 +1293,7 @@
                             <span>Empleados</span>
                         </button>
                         <button class="btn btn-progress" onclick="showAllAttendance()" style="white-space: nowrap;">
-                            <i class="fas fa-clock me-1"></i>
+                            <i class="fas fa-chart-bar me-1"></i>
                             <span>Todos los Registros</span>
                         </button>
                         <button id="addEmployeeBtn" class="btn btn-success" onclick="showAddEmployee()" style="white-space: nowrap;">
@@ -1598,12 +1605,6 @@
         console.log('✅ loadAllAttendance definida desde HTML');
     </script>
     
-    <script>
-        // Forzar recarga completa con timestamp único
-        const timestamp = new Date().getTime();
-        const script = document.createElement('script');
-        script.src = `app.js?v=${timestamp}-role-fixed`;
-        document.head.appendChild(script);
-    </script>
+    <script src="app-fixed.js?v=1771549200001"></script>
 </body>
 </html>
